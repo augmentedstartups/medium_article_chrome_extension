@@ -72,7 +72,7 @@ async function injectArticleToLinkedIn(article) {
 
 async function performInjection(article) {
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
-  console.log('[LinkedIn Injector] 🚀 STARTING INJECTION PROCESS');
+  console.log('[LinkedIn Injector] 🚀 STARTING FULL INJECTION PROCESS');
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
   
   const titleField = await LinkedInDOM.waitForTitleField();
@@ -83,13 +83,9 @@ async function performInjection(article) {
 
   const editor = await LinkedInDOM.waitForEditor();
   console.log('[LinkedIn Injector] ✅ Editor found');
-  
-  console.log('[LinkedIn Injector] ───────────────────────────────────────');
-  console.log('[LinkedIn Injector] ⏭️  SKIPPING BODY - Use Retry Button');
-  console.log('[LinkedIn Injector] ───────────────────────────────────────');
 
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
-  console.log('[LinkedIn Injector] 🖼️  UPLOADING COVER IMAGE');
+  console.log('[LinkedIn Injector] 🖼️  PHASE 1: UPLOADING COVER IMAGE');
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
 
   let coverImageUploaded = false;
@@ -108,16 +104,42 @@ async function performInjection(article) {
     console.log('[LinkedIn Injector] ⚠️  No images available for cover upload');
   }
 
+  console.log('[LinkedIn Injector] ───────────────────────────────────────');
+  console.log('[LinkedIn Injector] 📝 PHASE 2: INSERTING BODY CONTENT');
+  console.log('[LinkedIn Injector] ───────────────────────────────────────');
+
+  await RetryHandler.delay(1000);
+
+  let bodyResult;
+  try {
+    bodyResult = await FileUploadStrategy.inject(editor, article);
+    console.log('[LinkedIn Injector] ✅ Body content inserted successfully');
+  } catch (error) {
+    console.error('[LinkedIn Injector] ❌ Body content insertion failed:', error);
+    throw error;
+  }
+
+  await RetryHandler.delay(500);
+  const finalContent = editor.innerHTML || editor.textContent;
+  const verification = await RetryHandler.verifyImagesLoaded(editor);
+
+  console.log('[LinkedIn Injector] ───────────────────────────────────────');
+  console.log('[LinkedIn Injector] 📊 FINAL VERIFICATION');
+  console.log('[LinkedIn Injector] ───────────────────────────────────────');
+  console.log('[LinkedIn Injector] Body images loaded:', verification.loaded);
+  console.log('[LinkedIn Injector] Body images failed:', verification.failed);
+  console.log('[LinkedIn Injector] Final content length:', finalContent.length, 'chars');
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
-  console.log('[LinkedIn Injector] ✅ TITLE + COVER IMAGE COMPLETE');
-  console.log('[LinkedIn Injector] 📌 Click "Retry Body" button to insert body content');
+  console.log('[LinkedIn Injector] ✅ ✅ FULL INJECTION COMPLETE ✅ ✅');
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
 
   return {
     title: article.title,
+    contentBlocks: article.content.length,
     coverImageUploaded: coverImageUploaded,
-    bodySkipped: true,
-    message: 'Title and cover uploaded. Click Retry Body button to insert content.'
+    bodyResult: bodyResult,
+    imagesVerified: verification,
+    finalContentLength: finalContent.length
   };
 }
 
