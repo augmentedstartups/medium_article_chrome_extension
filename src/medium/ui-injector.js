@@ -315,8 +315,10 @@ function injectKajabiButton() {
       <line x1="16" y1="17" x2="8" y2="17"></line>
       <polyline points="10 9 9 9 8 9"></polyline>
     </svg>
-    <span>Post to Kajabi</span>
+    <span>Post to Kajabi 🤖</span>
   `;
+  
+  kajabiButton.title = 'Post to Kajabi with AI-powered SEO generation';
 
   document.body.appendChild(kajabiButton);
 

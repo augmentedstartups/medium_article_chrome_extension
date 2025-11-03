@@ -2,6 +2,22 @@ const OpenRouterService = {
   API_KEY: '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',
   API_URL: 'https://openrouter.ai/api/v1/chat/completions',
   MODEL: 'google/gemma-3-27b-it:free',
+  DESCRIPTION_PROMPT: 'You are an expert SEO copywriter. Write compelling meta descriptions that improve search rankings. Rules: NO emojis, NO hashtags, NO colons at the start, NO quotes. Use action words, include keywords naturally, create urgency or value. Focus on benefits and clarity. Maximum 160 characters. Start directly with engaging content.',
+  ALT_TEXT_PROMPT: 'You are an accessibility and SEO expert. Generate descriptive image alt text for featured blog images. Rules: NO emojis, NO hashtags, NO quotes. Be specific and descriptive. Include relevant keywords naturally. Maximum 125 characters. Describe what the image would show for the alt text. The alt text should be a single sentence that describes the image.',
+  
+  async init() {
+    await this.reloadSettings();
+  },
+  
+  async reloadSettings() {
+    const stored = await chrome.storage.local.get(['openRouterSettings']);
+    if (stored.openRouterSettings) {
+      this.MODEL = stored.openRouterSettings.model || this.MODEL;
+      this.DESCRIPTION_PROMPT = stored.openRouterSettings.descriptionPrompt || this.DESCRIPTION_PROMPT;
+      this.ALT_TEXT_PROMPT = stored.openRouterSettings.altTextPrompt || this.ALT_TEXT_PROMPT;
+      console.log('[OpenRouter] Settings reloaded:', this.MODEL);
+    }
+  },
 
   async generatePageDescription(articleTitle, articleSubtitle = '', articleContent = '') {
     try {
@@ -37,7 +53,7 @@ Return ONLY the description text, nothing else.`;
           messages: [
             {
               role: 'system',
-              content: 'You are an expert SEO copywriter. Write compelling meta descriptions that improve search rankings. Rules: NO emojis, NO hashtags, NO colons at the start, NO quotes. Use action words, include keywords naturally, create urgency or value. Focus on benefits and clarity. Maximum 160 characters. Start directly with engaging content.'
+              content: this.DESCRIPTION_PROMPT
             },
             {
               role: 'user',
@@ -94,7 +110,7 @@ Return ONLY the alt text, nothing else.`;
           messages: [
             {
               role: 'system',
-              content: 'You are an accessibility and SEO expert. Generate descriptive image alt text for featured blog images. Rules: NO emojis, NO hashtags, NO quotes. Be specific and descriptive. Include relevant keywords naturally. Maximum 125 characters. Describe what the image would show for the alt text. The alt text should be a single sentence that describes the image.'
+              content: this.ALT_TEXT_PROMPT
             },
             {
               role: 'user',
@@ -168,4 +184,8 @@ Return ONLY the alt text, nothing else.`;
     }
   }
 };
+
+if (typeof chrome !== 'undefined' && chrome.storage) {
+  OpenRouterService.init();
+}
 
