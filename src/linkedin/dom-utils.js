@@ -121,6 +121,99 @@ const LinkedInDOM = {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || '';
+  },
+
+  async findCoverUploadButton() {
+    const possibleSelectors = [
+      'button[aria-label*="Upload from computer"]',
+      '.article-editor-cover-media__placeholder button',
+      'button:has(svg[data-test-icon="upload-small"])'
+    ];
+
+    for (const selector of possibleSelectors) {
+      try {
+        const button = document.querySelector(selector);
+        if (button) {
+          console.log('[LinkedIn DOM] Found upload button with selector:', selector);
+          return button;
+        }
+      } catch (e) {
+        console.log('[LinkedIn DOM] Selector failed:', selector, e);
+      }
+    }
+
+    const allButtons = document.querySelectorAll('button');
+    for (const button of allButtons) {
+      const text = button.textContent.toLowerCase();
+      if (text.includes('upload') && text.includes('computer')) {
+        console.log('[LinkedIn DOM] Found upload button by text content');
+        return button;
+      }
+    }
+
+    throw new Error('Could not find upload button');
+  },
+
+  async waitForFileInput(timeout = 5000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const inputs = document.querySelectorAll('input[type="file"]');
+      for (const input of inputs) {
+        if (input.accept && input.accept.includes('image')) {
+          console.log('[LinkedIn DOM] Found file input');
+          return input;
+        }
+      }
+      
+      if (inputs.length > 0) {
+        console.log('[LinkedIn DOM] Found file input (no accept check)');
+        return inputs[0];
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error('File input did not appear after button click');
+  },
+
+  async waitForNextButton(timeout = 5000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const possibleSelectors = [
+        'button:has(.artdeco-button__text):contains("Next")',
+        'button[aria-label*="Next"]',
+        'button .artdeco-button__text'
+      ];
+
+      const allButtons = document.querySelectorAll('button');
+      for (const button of allButtons) {
+        const text = button.textContent.trim().toLowerCase();
+        if (text === 'next' || text.includes('next')) {
+          console.log('[LinkedIn DOM] Found Next button');
+          return button;
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    throw new Error('Next button did not appear after upload');
+  },
+
+  async dataURLtoFile(dataURL, filename) {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    
+    while(n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    
+    return new File([u8arr], filename, { type: mime });
   }
 };
 

@@ -281,6 +281,9 @@ function injectPanel() {
         <span class="status-icon">●</span>
         <span id="panel-status-text">Loading...</span>
       </div>
+      <div class="action-buttons" style="margin-bottom: 20px;">
+        <button class="btn btn-success" id="panel-insert-btn" style="display: none;">Insert into LinkedIn</button>
+      </div>
       <div id="panel-preview" style="display: none;">
         <div class="preview-section">
           <h3>Article Title</h3>
@@ -298,9 +301,6 @@ function injectPanel() {
           <h3>Content Preview</h3>
           <div class="preview-text" id="panel-text"></div>
         </div>
-      </div>
-      <div class="action-buttons">
-        <button class="btn btn-success" id="panel-insert-btn" style="display: none;">Insert into LinkedIn</button>
       </div>
     </div>
   `;
@@ -507,7 +507,9 @@ async function handleInsert() {
     }
 
     statusDiv.className = 'status success';
-    statusText.textContent = `✓ Inserted! ${response.result.contentBlocks} blocks, ${response.result.imagesInjected} images`;
+    const coverMsg = response.result.coverImageUploaded ? ' + cover' : '';
+    const attemptsMsg = response.result.insertionAttempts > 1 ? ` (${response.result.insertionAttempts} attempts)` : '';
+    statusText.textContent = `✓ Inserted! ${response.result.contentBlocks} blocks, ${response.result.imagesInjected} images${coverMsg}${attemptsMsg}`;
 
     insertBtn.disabled = false;
     insertBtn.textContent = 'Insert Again (if needed)';

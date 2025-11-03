@@ -59,7 +59,7 @@ async function handleLinkedInInjection(article) {
       await chrome.tabs.update(tab.id, { active: true });
       await chrome.tabs.reload(tab.id);
       await waitForTabLoad(tab.id);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 2500));
     } else {
       console.log('[Service Worker] Opening new LinkedIn article page...');
       tab = await chrome.tabs.create({ 
@@ -68,7 +68,8 @@ async function handleLinkedInInjection(article) {
       });
       console.log('[Service Worker] LinkedIn tab opened:', tab.id);
       await waitForTabLoad(tab.id);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('[Service Worker] Waiting for editor to initialize...');
+      await new Promise(resolve => setTimeout(resolve, 4000));
       isNewTab = true;
     }
     
