@@ -36,6 +36,17 @@
       </div>
     </div>
 
+    <div class="strategy-section">
+      <h3>Image Injection Strategy</h3>
+      <select id="strategySelector" class="strategy-selector">
+        <option value="CLIPBOARD_API">Strategy 1: Clipboard API (Fast)</option>
+        <option value="FILE_UPLOAD">Strategy 2: File Upload (Reliable)</option>
+        <option value="USER_PASTE">Strategy 3: User Paste (Semi-Auto)</option>
+        <option value="PROSEMIRROR">Strategy 4: ProseMirror (Advanced)</option>
+      </select>
+      <div id="strategyDescription" class="strategy-description"></div>
+    </div>
+
     <div class="buttons">
       <button id="extractBtn" class="btn btn-primary">
         Extract Article

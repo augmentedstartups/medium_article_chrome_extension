@@ -124,16 +124,21 @@ const LinkedInDOM = {
   },
 
   async findCoverUploadButton() {
+    console.log('[LinkedIn DOM] Searching for cover upload button...');
+    
     const possibleSelectors = [
       'button[aria-label*="Upload from computer"]',
       '.article-editor-cover-media__placeholder button',
-      'button:has(svg[data-test-icon="upload-small"])'
+      'button svg[data-test-icon="image-medium"]',
+      'button svg[data-test-icon="upload-small"]',
+      '.scaffold-formatted-text-editor-icon[data-test-icon="image-medium"]'
     ];
 
     for (const selector of possibleSelectors) {
       try {
-        const button = document.querySelector(selector);
-        if (button) {
+        const element = document.querySelector(selector);
+        if (element) {
+          const button = element.closest('button') || element;
           console.log('[LinkedIn DOM] Found upload button with selector:', selector);
           return button;
         }
@@ -142,15 +147,44 @@ const LinkedInDOM = {
       }
     }
 
+    console.log('[LinkedIn DOM] Trying to find button by SVG data-test-icon...');
     const allButtons = document.querySelectorAll('button');
     for (const button of allButtons) {
+      const svg = button.querySelector('svg[data-test-icon="image-medium"]');
+      if (svg) {
+        console.log('[LinkedIn DOM] Found upload button via image-medium SVG');
+        return button;
+      }
+      
+      const uploadSvg = button.querySelector('svg[data-test-icon="upload-small"]');
+      if (uploadSvg) {
+        console.log('[LinkedIn DOM] Found upload button via upload-small SVG');
+        return button;
+      }
+      
       const text = button.textContent.toLowerCase();
       if (text.includes('upload') && text.includes('computer')) {
         console.log('[LinkedIn DOM] Found upload button by text content');
         return button;
       }
+      
+      if (text.includes('upload') || text.includes('add') && button.querySelector('svg')) {
+        const ariaLabel = button.getAttribute('aria-label') || '';
+        if (ariaLabel.toLowerCase().includes('upload') || ariaLabel.toLowerCase().includes('image')) {
+          console.log('[LinkedIn DOM] Found upload button by aria-label:', ariaLabel);
+          return button;
+        }
+      }
     }
 
+    console.error('[LinkedIn DOM] Could not find cover upload button');
+    console.log('[LinkedIn DOM] Available buttons:', allButtons.length);
+    console.log('[LinkedIn DOM] First 5 buttons:', Array.from(allButtons).slice(0, 5).map(b => ({
+      text: b.textContent.substring(0, 50),
+      ariaLabel: b.getAttribute('aria-label'),
+      hasSvg: !!b.querySelector('svg')
+    })));
+    
     throw new Error('Could not find upload button');
   },
 
@@ -214,6 +248,20 @@ const LinkedInDOM = {
     }
     
     return new File([u8arr], filename, { type: mime });
+  },
+
+  generateNodeId(prefix = '') {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return prefix + window.crypto.randomUUID();
+      }
+    } catch (error) {
+      console.warn('[LinkedIn DOM] randomUUID unavailable, using fallback', error);
+    }
+
+    const random = Math.random().toString(36).slice(2, 10);
+    const timestamp = Date.now().toString(36);
+    return `${prefix}${random}-${timestamp}`;
   }
 };
 

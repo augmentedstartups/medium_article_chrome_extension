@@ -165,6 +165,76 @@ header h1 {
   display: none;
 }
 
+.strategy-section {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.strategy-section h3 {
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #333;
+  font-weight: 600;
+}
+
+.strategy-selector {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.strategy-selector:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.strategy-description {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f9fafb;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.strategy-description strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #667eea;
+}
+
+.strategy-description .desc-line {
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.strategy-description .likelihood {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 600;
+}
+
+.strategy-description .likelihood.high {
+  color: #10b981;
+}
+
+.strategy-description .likelihood.medium {
+  color: #f59e0b;
+}
+
+.strategy-description .likelihood.low {
+  color: #ef4444;
+}
+
 footer {
   margin-top: 16px;
   text-align: center;

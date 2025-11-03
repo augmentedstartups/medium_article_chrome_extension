@@ -1,14 +1,84 @@
+const StrategyDescriptions = {
+  CLIPBOARD_API: {
+    name: 'Clipboard API',
+    description: 'Uses navigator.clipboard.write() to write HTML to clipboard, then dispatches paste event',
+    pros: 'Fast, fully automated',
+    cons: 'May be blocked by browser security',
+    likelihood: 'Low - probably blocked',
+    likelihoodClass: 'low'
+  },
+  FILE_UPLOAD: {
+    name: 'File Upload',
+    description: 'Uploads each image individually via LinkedIn\'s upload button (like cover image)',
+    pros: 'Most reliable - uses LinkedIn\'s native upload',
+    cons: 'Slow (2-5s per image)',
+    likelihood: 'High - should work',
+    likelihoodClass: 'high'
+  },
+  USER_PASTE: {
+    name: 'User Paste',
+    description: 'Writes to clipboard and shows overlay instructing user to press Ctrl+V',
+    pros: 'Uses real paste handler, reliable',
+    cons: 'Requires user action (semi-automated)',
+    likelihood: 'High - should work',
+    likelihoodClass: 'high'
+  },
+  PROSEMIRROR: {
+    name: 'ProseMirror',
+    description: 'Directly injects content via LinkedIn\'s ProseMirror editor transactions',
+    pros: 'Fast, works with editor internals',
+    cons: 'May be obfuscated, could break',
+    likelihood: 'Medium - depends on access',
+    likelihoodClass: 'medium'
+  }
+};
+
 let extractedArticle = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const extractBtn = document.getElementById('extractBtn');
   const postBtn = document.getElementById('postBtn');
+  const strategySelector = document.getElementById('strategySelector');
   
   extractBtn.addEventListener('click', handleExtract);
   postBtn.addEventListener('click', handlePost);
+  strategySelector.addEventListener('change', handleStrategyChange);
   
+  loadSelectedStrategy();
   checkForExistingArticle();
 });
+
+async function loadSelectedStrategy() {
+  const result = await chrome.storage.sync.get(['imageStrategy']);
+  const strategy = result.imageStrategy || 'CLIPBOARD_API';
+  
+  document.getElementById('strategySelector').value = strategy;
+  updateStrategyDescription(strategy);
+}
+
+async function handleStrategyChange(event) {
+  const strategy = event.target.value;
+  
+  await chrome.storage.sync.set({ imageStrategy: strategy });
+  updateStrategyDescription(strategy);
+  
+  console.log('[Popup] Strategy changed to:', strategy);
+}
+
+function updateStrategyDescription(strategy) {
+  const desc = StrategyDescriptions[strategy];
+  const descDiv = document.getElementById('strategyDescription');
+  
+  if (desc) {
+    descDiv.innerHTML = `
+      <strong>${desc.name}</strong>
+      <div class="desc-line">${desc.description}</div>
+      <div class="desc-line"><strong>Pros:</strong> ${desc.pros}</div>
+      <div class="desc-line"><strong>Cons:</strong> ${desc.cons}</div>
+      <div class="likelihood ${desc.likelihoodClass}">Success Likelihood: ${desc.likelihood}</div>
+    `;
+  }
+}
 
 async function checkForExistingArticle() {
   const result = await chrome.storage.local.get(['extractedArticle', 'extractedAt']);

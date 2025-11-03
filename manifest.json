@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Medium to LinkedIn Article Publisher",
-  "version": "1.1.2",
+  "version": "1.5.9",
   "description": "Extract Medium articles and publish them to LinkedIn with one click",
   "permissions": [
     "activeTab",
@@ -20,12 +20,24 @@
   "content_scripts": [
     {
       "matches": ["https://medium.com/*", "https://*.medium.com/*"],
-      "js": ["src/medium/parser.js", "src/medium/extractor.js", "src/medium/ui-injector.js"],
+      "js": ["src/shared/config.js", "src/medium/parser.js", "src/medium/extractor.js", "src/medium/ui-injector.js"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://www.linkedin.com/*", "https://linkedin.com/*"],
-      "js": ["src/linkedin/injector.js", "src/linkedin/retry-handler.js", "src/linkedin/dom-utils.js"],
+      "js": [
+        "src/shared/config.js",
+        "src/linkedin/retry-handler.js",
+        "src/linkedin/dom-utils.js",
+        "src/linkedin/strategies/clipboard-api-strategy.js",
+        "src/linkedin/strategies/file-upload-strategy.js",
+        "src/linkedin/strategies/user-paste-strategy.js",
+        "src/linkedin/strategies/prosemirror-strategy.js",
+        "src/linkedin/injector.js",
+        "src/linkedin/ui-helper.js",
+        "src/linkedin/test-data.js",
+        "src/linkedin/test-button.js"
+      ],
       "run_at": "document_idle"
     }
   ],

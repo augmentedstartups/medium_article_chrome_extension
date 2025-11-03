@@ -111,22 +111,29 @@ async function extractMediumArticle() {
     if (parsed) {
       if (parsed.type === 'image') {
         console.log('[Medium Extractor] Processing image:', parsed.src);
+        const originalSrc = parsed.src;
         try {
           const dataURL = await MediumParser.imageToDataURL(parsed.src);
           parsed.dataURL = dataURL;
-          console.log('[Medium Extractor] Image converted, data URL length:', dataURL.length);
+          parsed.src = originalSrc;
+          console.log('[Medium Extractor] ✓ Preserved original URL in content block:', originalSrc);
           article.images.push({
-            original: parsed.src,
+            original: originalSrc,
             dataURL: dataURL,
             alt: parsed.alt,
             caption: parsed.caption
           });
         } catch (error) {
           console.error('[Medium Extractor] Failed to convert image:', parsed.src, error);
+          parsed.src = originalSrc;
         }
       }
       
       article.content.push(parsed);
+      
+      if (parsed.type === 'image') {
+        console.log('[Medium Extractor] Content block has src:', !!parsed.src, 'and dataURL:', !!parsed.dataURL);
+      }
     }
   }
 

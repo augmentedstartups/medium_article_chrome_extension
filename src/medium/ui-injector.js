@@ -302,6 +302,14 @@ function injectPanel() {
           <div class="preview-text" id="panel-text"></div>
         </div>
       </div>
+      <div id="panel-retry-section" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+        <button id="retry-body-btn" class="btn" style="background: #ff6b35; color: white; margin-top: 10px;">
+          🔄 Retry Body Paste (Manual Failsafe)
+        </button>
+        <p style="font-size: 12px; color: #666; margin-top: 8px;">
+          Use this if the article body didn't paste correctly into LinkedIn
+        </p>
+      </div>
     </div>
   `;
 
@@ -309,6 +317,7 @@ function injectPanel() {
 
   panel.querySelector('.close-btn').addEventListener('click', closePanel);
   panel.querySelector('#panel-insert-btn').addEventListener('click', handleInsert);
+  panel.querySelector('#retry-body-btn').addEventListener('click', handleManualRetry);
 
   console.log('[Medium UI] Panel injected');
 }
@@ -331,22 +340,105 @@ function closePanel() {
 async function handleButtonClick() {
   openPanel();
   
-  const result = await chrome.storage.local.get(['extractedArticle', 'extractedAt']);
-  const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-  
-  if (result.extractedArticle && result.extractedAt && result.extractedAt > fiveMinutesAgo) {
-    console.log('[Medium UI] Using cached article');
-    showExtractedState(result.extractedArticle);
-  } else {
-    console.log('[Medium UI] Auto-extracting article...');
+  try {
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      console.error('[Medium UI] Chrome API not available');
+      throw new Error('Chrome extension API not available');
+    }
+
+    const result = await chrome.storage.local.get(['extractedArticle', 'extractedAt']);
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    
+    if (result.extractedArticle && result.extractedAt && result.extractedAt > fiveMinutesAgo) {
+      console.log('[Medium UI] Using cached article, auto-inserting...');
+      showExtractedState(result.extractedArticle);
+      setTimeout(() => {
+        handleInsert();
+      }, 500);
+    } else {
+      console.log('[Medium UI] Auto-extracting and inserting article...');
+      const statusDiv = document.getElementById('panel-status');
+      const statusText = document.getElementById('panel-status-text');
+      statusDiv.className = 'status loading';
+      statusText.textContent = 'Extracting article...';
+      
+      setTimeout(() => {
+        handleExtractAndInsert();
+      }, 100);
+    }
+  } catch (error) {
+    console.error('[Medium UI] Error in handleButtonClick:', error);
     const statusDiv = document.getElementById('panel-status');
     const statusText = document.getElementById('panel-status-text');
+    if (statusDiv && statusText) {
+      statusDiv.className = 'status error';
+      statusText.textContent = 'Error: ' + error.message;
+    }
+  }
+}
+
+async function handleExtractAndInsert() {
+  const statusDiv = document.getElementById('panel-status');
+  const statusText = document.getElementById('panel-status-text');
+  const insertBtn = document.getElementById('panel-insert-btn');
+  const previewDiv = document.getElementById('panel-preview');
+
+  try {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.runtime) {
+      throw new Error('Chrome extension API not available');
+    }
+
     statusDiv.className = 'status loading';
     statusText.textContent = 'Extracting article...';
-    
+    insertBtn.disabled = true;
+
+    const article = await extractMediumArticle();
+
+    await chrome.storage.local.set({
+      extractedArticle: article,
+      extractedAt: Date.now()
+    });
+
+    buildAndShowPreview(article);
+
+    statusDiv.className = 'status success';
+    statusText.textContent = 'Article extracted! Now inserting...';
+    insertBtn.style.display = 'block';
+    insertBtn.disabled = true;
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    statusDiv.className = 'status loading';
+    statusText.textContent = 'Inserting into LinkedIn...';
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'openLinkedInAndInject',
+      data: { article }
+    });
+
+    console.log('[Medium UI] Response from service worker:', response);
+
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+
+    statusDiv.className = 'status success';
+    const coverMsg = response.result.coverImageUploaded ? ' + cover' : '';
+    const attemptsMsg = response.result.insertionAttempts > 1 ? ` (${response.result.insertionAttempts} attempts)` : '';
+    statusText.textContent = `✓ Complete! ${response.result.contentBlocks} blocks, ${response.result.imagesInjected} images${coverMsg}${attemptsMsg}`;
+
+    insertBtn.disabled = false;
+    insertBtn.textContent = 'Insert Again (if needed)';
+
     setTimeout(() => {
-      handleExtract();
-    }, 100);
+      insertBtn.textContent = 'Insert into LinkedIn';
+    }, 5000);
+
+  } catch (error) {
+    console.error('[Medium UI] Auto extraction/insertion error:', error);
+    statusDiv.className = 'status error';
+    statusText.textContent = `Error: ${error.message}`;
+    insertBtn.disabled = false;
   }
 }
 
@@ -451,6 +543,10 @@ async function handleExtract() {
   const previewDiv = document.getElementById('panel-preview');
 
   try {
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      throw new Error('Chrome extension API not available');
+    }
+
     statusDiv.className = 'status loading';
     statusText.textContent = 'Extracting article...';
     insertBtn.disabled = true;
@@ -481,11 +577,17 @@ async function handleInsert() {
   const statusDiv = document.getElementById('panel-status');
   const statusText = document.getElementById('panel-status-text');
   const insertBtn = document.getElementById('panel-insert-btn');
+  const retrySection = document.getElementById('panel-retry-section');
 
   try {
+    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.runtime) {
+      throw new Error('Chrome extension API not available');
+    }
+
     statusDiv.className = 'status loading';
     statusText.textContent = 'Inserting into LinkedIn...';
     insertBtn.disabled = true;
+    retrySection.style.display = 'none';
 
     const result = await chrome.storage.local.get(['extractedArticle']);
 
@@ -513,6 +615,7 @@ async function handleInsert() {
 
     insertBtn.disabled = false;
     insertBtn.textContent = 'Insert Again (if needed)';
+    retrySection.style.display = 'block';
 
     setTimeout(() => {
       insertBtn.textContent = 'Insert into LinkedIn';
@@ -524,12 +627,56 @@ async function handleInsert() {
     statusText.textContent = `Error: ${error.message}`;
     insertBtn.disabled = false;
     insertBtn.textContent = 'Retry Insert';
+    retrySection.style.display = 'block';
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', injectFloatingButton);
+async function handleManualRetry() {
+  console.log('[Medium UI] ═══════════════════════════════════════');
+  console.log('[Medium UI] 🔄 MANUAL RETRY TRIGGERED');
+  console.log('[Medium UI] ═══════════════════════════════════════');
+  
+  const statusDiv = document.getElementById('panel-status');
+  const statusText = document.getElementById('panel-status-text');
+  const retryBtn = document.getElementById('retry-body-btn');
+  
+  statusDiv.className = 'status loading';
+  statusText.textContent = '🔄 Manually retrying body paste...';
+  retryBtn.disabled = true;
+  
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'retryBodyPaste'
+    });
+    
+    console.log('[Medium UI] Manual retry response:', response);
+    
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+
+    statusDiv.className = 'status success';
+    statusText.textContent = `✓ Manual retry successful! (${response.result.attempts} attempts)`;
+    retryBtn.textContent = '✓ Body Pasted';
+    setTimeout(() => {
+      retryBtn.disabled = false;
+      retryBtn.textContent = '🔄 Retry Body Paste (Manual Failsafe)';
+    }, 3000);
+  } catch (error) {
+    console.error('[Medium UI] Manual retry error:', error);
+    statusDiv.className = 'status error';
+    statusText.textContent = '✗ Manual retry failed: ' + error.message;
+    retryBtn.disabled = false;
+  }
+}
+
+if (typeof chrome !== 'undefined' && chrome.storage && chrome.runtime) {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', injectFloatingButton);
+  } else {
+    injectFloatingButton();
+  }
 } else {
-  injectFloatingButton();
+  console.error('[Medium UI] Chrome extension API not available, skipping injection');
 }
 
