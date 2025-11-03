@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medium to LinkedIn</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Medium → LinkedIn</h1>
+      <p class="subtitle">Article Publisher</p>
+    </header>
+
+    <div id="status" class="status">
+      <span class="status-icon">●</span>
+      <span id="statusText">Ready</span>
+    </div>
+
+    <div id="previewSection" class="preview-section hidden">
+      <h3>Article Preview</h3>
+      <div class="preview-content">
+        <div class="preview-item">
+          <strong>Title:</strong>
+          <p id="previewTitle"></p>
+        </div>
+        <div class="preview-item">
+          <strong>Stats:</strong>
+          <p id="previewStats"></p>
+        </div>
+        <div class="preview-item">
+          <strong>Preview:</strong>
+          <p id="previewText" class="preview-text"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button id="extractBtn" class="btn btn-primary">
+        Extract Article
+      </button>
+      <button id="postBtn" class="btn btn-success hidden">
+        Post to LinkedIn
+      </button>
+    </div>
+
+    <footer>
+      <a href="options.html" target="_blank" class="settings-link">Settings</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

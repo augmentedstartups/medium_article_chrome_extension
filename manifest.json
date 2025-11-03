@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Medium to LinkedIn Article Publisher",
+  "version": "1.0.7",
+  "description": "Extract Medium articles and publish them to LinkedIn with one click",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://medium.com/*",
+    "https://*.medium.com/*",
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*"
+  ],
+  "background": {
+    "service_worker": "src/background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://medium.com/*", "https://*.medium.com/*"],
+      "js": ["src/medium/parser.js", "src/medium/extractor.js", "src/medium/ui-injector.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.linkedin.com/*", "https://linkedin.com/*"],
+      "js": ["src/linkedin/injector.js", "src/linkedin/retry-handler.js", "src/linkedin/dom-utils.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "src/popup/options.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/ritz_cta.png"],
+      "matches": ["https://www.linkedin.com/*", "https://linkedin.com/*"]
+    }
+  ]
+}
+
