@@ -42,6 +42,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  
+  if (message.action === 'openKajabiForImageTest') {
+    handleKajabiTabForTest()
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
 async function handleExtraction(tabId) {
@@ -205,6 +212,40 @@ async function handleRetryFromLinkedIn(article) {
     tabId: tab.id,
     result: response.result
   };
+}
+
+async function handleKajabiTabForTest() {
+  try {
+    console.log('[Service Worker] Opening/switching to Kajabi for image test...');
+    
+    const kajabiNewPostURL = 'https://app.kajabi.com/admin/sites/104576/blog_posts/new';
+    const tabs = await chrome.tabs.query({ url: 'https://app.kajabi.com/admin/sites/*/blog_posts/*' });
+    
+    let tab;
+    
+    if (tabs.length > 0) {
+      tab = tabs[0];
+      console.log('[Service Worker] Found existing Kajabi tab:', tab.id);
+      await chrome.tabs.update(tab.id, { active: true });
+    } else {
+      console.log('[Service Worker] Opening new Kajabi blog post page...');
+      tab = await chrome.tabs.create({ 
+        url: kajabiNewPostURL,
+        active: true 
+      });
+      console.log('[Service Worker] Kajabi tab opened:', tab.id);
+      await waitForTabLoad(tab.id);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    return {
+      success: true,
+      tabId: tab.id
+    };
+  } catch (error) {
+    console.error('[Service Worker] Failed to open Kajabi tab:', error);
+    throw error;
+  }
 }
 
 async function handleKajabiInjection(article) {
