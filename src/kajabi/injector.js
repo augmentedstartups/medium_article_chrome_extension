@@ -89,6 +89,18 @@ async function injectArticleToKajabi(article) {
 
   await KajabiDOM.delay(500);
 
+  if (article.images && article.images.length > 0 && article.images[0].dataURL) {
+    console.log('[Kajabi Injector] 📸 Uploading first image to social image slots...');
+    try {
+      await uploadSocialImages(article.images[0]);
+      console.log('[Kajabi Injector] ✅ Social images uploaded');
+    } catch (error) {
+      console.error('[Kajabi Injector] ⚠️ Social image upload failed:', error);
+    }
+  } else {
+    console.log('[Kajabi Injector] ⏭️ No first image available for social image upload');
+  }
+
   await fillKajabiMetadata(article);
   console.log('[Kajabi Injector] ✅ Metadata fields filled');
 
@@ -199,6 +211,181 @@ function escapeHTML(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+async function uploadSocialImages(imageData) {
+  console.log('[Kajabi Injector] Starting social image uploads...');
+  
+  try {
+    await uploadToSocialImageSlot(imageData, 1);
+    await uploadToSocialImageSlot(imageData, 2);
+    console.log('[Kajabi Injector] ✅ Both social images uploaded successfully');
+  } catch (error) {
+    console.error('[Kajabi Injector] Social image upload failed:', error);
+    throw error;
+  }
+}
+
+async function uploadToSocialImageSlot(imageData, slotNumber) {
+  console.log(`[Kajabi Injector] Uploading to social image slot ${slotNumber}...`);
+  
+  const dropdownButtons = document.querySelectorAll('button[data-sage-upload-card-target="dropdownTrigger"]');
+  
+  if (dropdownButtons.length < slotNumber) {
+    throw new Error(`Social image slot ${slotNumber} not found`);
+  }
+
+  const dropdownButton = dropdownButtons[slotNumber - 1];
+  dropdownButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  await KajabiDOM.delay(300);
+  
+  dropdownButton.click();
+  await KajabiDOM.delay(800);
+
+  let uploadLink = null;
+  const allLinks = document.querySelectorAll('a.sage-dropdown__item-control, a.fp-input');
+  
+  for (const link of allLinks) {
+    if (link.textContent.includes('Upload') && link.offsetParent !== null) {
+      uploadLink = link;
+      break;
+    }
+  }
+  
+  if (!uploadLink) {
+    const fpInputs = document.querySelectorAll('.fp-input');
+    for (const input of fpInputs) {
+      if (input.offsetParent !== null) {
+        uploadLink = input;
+        break;
+      }
+    }
+  }
+  
+  if (!uploadLink) {
+    throw new Error(`Upload link ${slotNumber} not found`);
+  }
+  
+  uploadLink.click();
+  await KajabiDOM.delay(1500);
+
+  const fileInput = await waitForFileInputForSocial();
+  
+  const file = await dataURLtoFileForSocial(imageData.dataURL, `social-image-${slotNumber}.jpg`);
+  console.log(`[Kajabi Injector] Created file for slot ${slotNumber}:`, file.size, 'bytes');
+
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  fileInput.files = dataTransfer.files;
+
+  fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+  fileInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+  await KajabiDOM.delay(1500);
+  
+  const uploadButton = await waitForUploadButtonForSocial();
+  uploadButton.click();
+  console.log(`[Kajabi Injector] Clicked upload button for slot ${slotNumber}`);
+  
+  await KajabiDOM.delay(2000);
+  
+  const saveButton = await waitForSaveButtonForSocial();
+  saveButton.click();
+  console.log(`[Kajabi Injector] Clicked save button for slot ${slotNumber}`);
+  
+  await waitForModalCloseForSocial();
+  await KajabiDOM.delay(1000);
+  
+  console.log(`[Kajabi Injector] ✅ Social image slot ${slotNumber} complete`);
+}
+
+async function waitForFileInputForSocial(timeout = 8000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    const inputs = document.querySelectorAll('input[type="file"]');
+    
+    for (const input of inputs) {
+      if (input.offsetParent !== null || input.style.display !== 'none') {
+        return input;
+      }
+    }
+    
+    if (inputs.length > 0) {
+      return inputs[inputs.length - 1];
+    }
+    
+    await KajabiDOM.delay(200);
+  }
+  
+  throw new Error('File input did not appear for social image');
+}
+
+async function waitForUploadButtonForSocial(timeout = 5000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    const uploadButtons = document.querySelectorAll('button.uppy-StatusBar-actionBtn--upload, button[aria-label*="Upload"]');
+    
+    for (const button of uploadButtons) {
+      if ((button.textContent.includes('Upload') && button.textContent.includes('file')) && button.offsetParent !== null) {
+        return button;
+      }
+    }
+    
+    await KajabiDOM.delay(200);
+  }
+  
+  throw new Error('Upload button did not appear');
+}
+
+async function waitForSaveButtonForSocial(timeout = 8000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    const saveButtons = document.querySelectorAll('button.uppy-DashboardContent-save, button[type="button"]');
+    
+    for (const button of saveButtons) {
+      if (button.textContent.includes('Save') && button.offsetParent !== null) {
+        return button;
+      }
+    }
+    
+    await KajabiDOM.delay(200);
+  }
+  
+  throw new Error('Save button did not appear');
+}
+
+async function waitForModalCloseForSocial(timeout = 5000) {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeout) {
+    const modals = document.querySelectorAll('.uppy-Dashboard, [role="dialog"]');
+    const visibleModals = Array.from(modals).filter(m => m.offsetParent !== null);
+    
+    if (visibleModals.length === 0) {
+      return true;
+    }
+    
+    await KajabiDOM.delay(200);
+  }
+  
+  return false;
+}
+
+async function dataURLtoFileForSocial(dataURL, filename) {
+  const arr = dataURL.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  
+  while(n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  
+  return new File([u8arr], filename, { type: mime });
 }
 
 async function fillKajabiMetadata(article) {
