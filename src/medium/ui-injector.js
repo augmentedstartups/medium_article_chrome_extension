@@ -1,5 +1,6 @@
 let panel = null;
 let floatingButton = null;
+let kajabiButton = null;
 
 function injectFloatingButton() {
   if (floatingButton) return;
@@ -48,6 +49,41 @@ function injectFloatingButton() {
     }
 
     #medium-linkedin-button.loading {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    #medium-kajabi-button {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4);
+      z-index: 999999;
+      transition: all 0.3s ease;
+    }
+
+    #medium-kajabi-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 152, 0, 0.6);
+    }
+
+    #medium-kajabi-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    #medium-kajabi-button.loading {
       opacity: 0.7;
       cursor: wait;
     }
@@ -264,6 +300,94 @@ function injectFloatingButton() {
   floatingButton.addEventListener('click', handleButtonClick);
 
   console.log('[Medium UI] Floating button injected');
+}
+
+function injectKajabiButton() {
+  if (kajabiButton) return;
+
+  kajabiButton = document.createElement('div');
+  kajabiButton.id = 'medium-kajabi-button';
+  kajabiButton.innerHTML = `
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="16" y1="13" x2="8" y2="13"></line>
+      <line x1="16" y1="17" x2="8" y2="17"></line>
+      <polyline points="10 9 9 9 8 9"></polyline>
+    </svg>
+    <span>Post to Kajabi</span>
+  `;
+
+  document.body.appendChild(kajabiButton);
+
+  kajabiButton.addEventListener('click', handleKajabiButtonClick);
+
+  console.log('[Medium UI] Kajabi button injected');
+}
+
+async function handleKajabiButtonClick() {
+  const originalHTML = kajabiButton.innerHTML;
+  
+  try {
+    kajabiButton.classList.add('loading');
+    kajabiButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      <span>Extracting...</span>
+    `;
+
+    const article = await extractMediumArticle();
+
+    await chrome.storage.local.set({
+      extractedArticle: article,
+      extractedAt: Date.now()
+    });
+
+    kajabiButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      <span>Posting to Kajabi...</span>
+    `;
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'openKajabiAndInject',
+      data: { article }
+    });
+
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+
+    kajabiButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>Posted to Kajabi!</span>
+    `;
+
+    setTimeout(() => {
+      kajabiButton.classList.remove('loading');
+      kajabiButton.innerHTML = originalHTML;
+    }, 3000);
+
+  } catch (error) {
+    console.error('[Medium UI] Kajabi button error:', error);
+    kajabiButton.classList.remove('loading');
+    kajabiButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+      <span>Error: ${error.message.substring(0, 20)}...</span>
+    `;
+    
+    setTimeout(() => {
+      kajabiButton.innerHTML = originalHTML;
+    }, 4000);
+  }
 }
 
 function injectPanel() {
@@ -672,9 +796,13 @@ async function handleManualRetry() {
 
 if (typeof chrome !== 'undefined' && chrome.storage && chrome.runtime) {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectFloatingButton);
+    document.addEventListener('DOMContentLoaded', () => {
+      injectFloatingButton();
+      injectKajabiButton();
+    });
   } else {
     injectFloatingButton();
+    injectKajabiButton();
   }
 } else {
   console.error('[Medium UI] Chrome extension API not available, skipping injection');

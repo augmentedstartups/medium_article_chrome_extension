@@ -38,10 +38,12 @@ let extractedArticle = null;
 document.addEventListener('DOMContentLoaded', () => {
   const extractBtn = document.getElementById('extractBtn');
   const postBtn = document.getElementById('postBtn');
+  const kajabiBtn = document.getElementById('kajabiBtn');
   const strategySelector = document.getElementById('strategySelector');
   
   extractBtn.addEventListener('click', handleExtract);
   postBtn.addEventListener('click', handlePost);
+  kajabiBtn.addEventListener('click', handleKajabiPost);
   strategySelector.addEventListener('change', handleStrategyChange);
   
   loadSelectedStrategy();
@@ -90,6 +92,7 @@ async function checkForExistingArticle() {
       extractedArticle = result.extractedArticle;
       showPreview(extractedArticle);
       updateStatus('ready', 'Article ready to post');
+      document.getElementById('kajabiBtn').classList.remove('hidden');
     }
   }
 }
@@ -118,6 +121,7 @@ async function handleExtract() {
     updateStatus('success', 'Article extracted successfully!');
     
     document.getElementById('postBtn').classList.remove('hidden');
+    document.getElementById('kajabiBtn').classList.remove('hidden');
     
   } catch (error) {
     console.error('Extraction error:', error);
@@ -153,6 +157,37 @@ async function handlePost() {
     
   } catch (error) {
     console.error('Posting error:', error);
+    updateStatus('error', `Error: ${error.message}`);
+    enableButtons();
+  }
+}
+
+async function handleKajabiPost() {
+  try {
+    if (!extractedArticle) {
+      throw new Error('No article to post. Please extract first.');
+    }
+    
+    updateStatus('posting', 'Posting to Kajabi...');
+    disableButtons();
+    
+    const response = await chrome.runtime.sendMessage({
+      action: 'openKajabiAndInject',
+      data: { article: extractedArticle }
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    
+    updateStatus('success', 'Article posted to Kajabi!');
+    
+    setTimeout(() => {
+      window.close();
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Kajabi posting error:', error);
     updateStatus('error', `Error: ${error.message}`);
     enableButtons();
   }
@@ -194,10 +229,12 @@ function updateStatus(state, message) {
 function disableButtons() {
   document.getElementById('extractBtn').disabled = true;
   document.getElementById('postBtn').disabled = true;
+  document.getElementById('kajabiBtn').disabled = true;
 }
 
 function enableButtons() {
   document.getElementById('extractBtn').disabled = false;
   document.getElementById('postBtn').disabled = false;
+  document.getElementById('kajabiBtn').disabled = false;
 }
 

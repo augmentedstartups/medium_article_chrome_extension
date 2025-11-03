@@ -161,6 +161,11 @@ header h1 {
   color: white;
 }
 
+.btn-kajabi {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+}
+
 .hidden {
   display: none;
 }

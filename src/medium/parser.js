@@ -46,7 +46,7 @@ const MediumParser = {
           const href = node.getAttribute('href');
           content += `<a href="${href}">${text}</a>`;
         } else if (tag === 'code') {
-          content += `<code>${text}</code>`;
+          content += `<em>${text}</em>`;
         } else {
           content += text;
         }

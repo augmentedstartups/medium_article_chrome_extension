@@ -35,6 +35,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  
+  if (message.action === 'openKajabiAndInject') {
+    handleKajabiInjection(message.data.article)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
 
 async function handleExtraction(tabId) {
@@ -198,5 +205,44 @@ async function handleRetryFromLinkedIn(article) {
     tabId: tab.id,
     result: response.result
   };
+}
+
+async function handleKajabiInjection(article) {
+  try {
+    console.log('[Service Worker] Checking for Kajabi blog post tab...');
+    
+    const tabs = await chrome.tabs.query({ url: 'https://app.kajabi.com/admin/sites/*/blog_posts/*' });
+    
+    if (tabs.length === 0) {
+      throw new Error('Please open a Kajabi blog post page first (New or Edit)');
+    }
+    
+    const tab = tabs[0];
+    console.log('[Service Worker] Found Kajabi tab:', tab.id);
+    await chrome.tabs.update(tab.id, { active: true });
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    console.log('[Service Worker] Injecting article into Kajabi...');
+    
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      action: 'injectToKajabi',
+      data: { article }
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error);
+    }
+    
+    console.log('[Service Worker] Article injected to Kajabi successfully:', response.result);
+    
+    return {
+      success: true,
+      result: response.result
+    };
+  } catch (error) {
+    console.error('[Service Worker] Kajabi injection failed:', error);
+    throw error;
+  }
 }
 

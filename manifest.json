@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Medium to LinkedIn Article Publisher",
-  "version": "1.7.2",
+  "version": "1.8.3",
   "description": "Extract Medium articles and publish them to LinkedIn with one click",
   "permissions": [
     "activeTab",
@@ -12,7 +12,8 @@
     "https://medium.com/*",
     "https://*.medium.com/*",
     "https://www.linkedin.com/*",
-    "https://linkedin.com/*"
+    "https://linkedin.com/*",
+    "https://app.kajabi.com/*"
   ],
   "background": {
     "service_worker": "src/background/service-worker.js"
@@ -38,6 +39,14 @@
         "src/linkedin/test-data.js",
         "src/linkedin/test-button.js",
         "src/linkedin/sidebar.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://app.kajabi.com/admin/sites/*/blog_posts/*"],
+      "js": [
+        "src/kajabi/dom-utils.js",
+        "src/kajabi/injector.js"
       ],
       "run_at": "document_idle"
     }
