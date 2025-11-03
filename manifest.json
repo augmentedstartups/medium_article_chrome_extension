@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Medium to LinkedIn Article Publisher",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "Extract Medium articles and publish them to LinkedIn with one click",
   "permissions": [
     "activeTab",
@@ -56,11 +56,6 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "web_accessible_resources": [
-    {
-      "resources": ["assets/ritz_cta.png"],
-      "matches": ["https://www.linkedin.com/*", "https://linkedin.com/*"]
-    }
-  ]
+  "web_accessible_resources": []
 }
 

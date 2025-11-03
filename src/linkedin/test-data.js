@@ -1,10 +1,7 @@
 const TestData = {
   async getTestArticle() {
-    const testImageURL = chrome.runtime.getURL('assets/ritz_cta.png');
-    
-    const response = await fetch(testImageURL);
-    const blob = await response.blob();
-    const dataURL = await this.blobToDataURL(blob);
+    const testImageURL = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPvCfp6ogVGVzdCBJbWFnZTwvdGV4dD48L3N2Zz4=';
+    const dataURL = testImageURL;
     
     return {
       title: 'Test Article: LinkedIn Upload Validation',

@@ -49,23 +49,16 @@ const FileUploadStrategy = {
         }
       }
       
-      console.log('[File Upload Strategy] ───────────────────────────────────────');
-      console.log('[File Upload Strategy] 🎯 Uploading final CTA image...');
-      const ctaImageURL = chrome.runtime.getURL('assets/ritz_cta.png');
-      await this.uploadImageFromURL(editor, ctaImageURL, 'CTA');
-      
       console.log('[File Upload Strategy] ═══════════════════════════════════════');
       console.log('[File Upload Strategy] ✅ SUCCESS!');
       console.log('[File Upload Strategy] Total blocks processed:', blockNumber);
       console.log('[File Upload Strategy] Body images uploaded:', uploadedImages);
-      console.log('[File Upload Strategy] CTA image uploaded: 1');
-      console.log('[File Upload Strategy] Total images:', uploadedImages + 1);
       console.log('[File Upload Strategy] ═══════════════════════════════════════');
       
       return {
         success: true,
         strategy: 'FILE_UPLOAD',
-        imagesUploaded: uploadedImages + 1,
+        imagesUploaded: uploadedImages,
         blocksProcessed: blockNumber
       };
       

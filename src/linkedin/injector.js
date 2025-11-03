@@ -271,23 +271,6 @@ function buildHTMLContent(article, skipFirstImage = true) {
     }
   }
 
-  const ctaImageURL = chrome.runtime.getURL('assets/ritz_cta.png');
-  html += `
-<figure class="article-editor-figure-image" data-id="${LinkedInDOM.generateNodeId('cta-')}">
-  <div class="article-editor-inline-image__container article-editor-inline-image__container--full-width" contenteditable="false">
-    <div class="article-editor-content__element-overlay">
-      <div class="article-editor-inline-image__buttons" data-test-inline-image-buttons="true"></div>
-    </div>
-    <img src="${ctaImageURL}" alt="AI Automation Audit Call-to-Action" class="article-editor-inline-image__image">
-  </div>
-  <figcaption contenteditable="false" class="is-empty">
-    <textarea class="article-editor-figure-caption" maxlength="250" data-test-inline-image-caption="true" placeholder="Add a caption (optional)" aria-label="Add a caption (optional)"></textarea>
-  </figcaption>
-</figure>
-`;
-
-  console.log('[LinkedIn Injector] Added CTA image figure block');
-
   return html;
 }
 
