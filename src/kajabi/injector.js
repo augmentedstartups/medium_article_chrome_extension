@@ -30,94 +30,168 @@ async function injectArticleToKajabi(article) {
   const editorBody = await KajabiDOM.waitForTinyMCE();
   console.log('[Kajabi Injector] ✅ TinyMCE editor found');
 
-  const htmlContent = buildKajabiHTML(article);
-  console.log('[Kajabi Injector] Built HTML, length:', htmlContent.length);
+  console.log('[Kajabi Injector] ───────────────────────────────────────');
+  console.log('[Kajabi Injector] 📝 INSERTING TEXT + IMAGES SEQUENTIALLY');
+  console.log('[Kajabi Injector] ───────────────────────────────────────');
 
-  editorBody.innerHTML = htmlContent;
-  console.log('[Kajabi Injector] ✅ Content pasted to TinyMCE');
+  if (article.subtitle) {
+    editorBody.innerHTML += `<h2>${escapeHTML(article.subtitle)}</h2>`;
+    console.log('[Kajabi Injector] ✅ Subtitle added');
+    await KajabiDOM.delay(100);
+  }
+
+  let imageCount = 0;
+  let uploadedImages = 0;
+  let blockNumber = 0;
+
+  for (const block of article.content) {
+    blockNumber++;
+    console.log(`[Kajabi Injector] Block ${blockNumber}/${article.content.length}: ${block.type}`);
+
+    if (block.type === 'p' || block.type.startsWith('h') || block.type === 'blockquote' || block.type === 'quote') {
+      await insertTextBlock(editorBody, block);
+    } else if (block.type === 'ul' || block.type === 'ol') {
+      await insertListBlock(editorBody, block);
+    } else if (block.type === 'code') {
+      await insertCodeBlock(editorBody, block);
+    } else if (block.type === 'image') {
+      imageCount++;
+      console.log(`[Kajabi Injector] → 🖼️ Uploading image ${imageCount}...`);
+      
+      const success = await KajabiImageUploader.uploadImage(block, imageCount, editorBody);
+      if (success) {
+        uploadedImages++;
+        console.log(`[Kajabi Injector] → ✅ Image ${imageCount} uploaded`);
+      } else {
+        console.log(`[Kajabi Injector] → ⚠️ Image ${imageCount} failed, adding placeholder`);
+        await insertImagePlaceholder(editorBody, block);
+      }
+      
+      await KajabiDOM.delay(800);
+    }
+  }
 
   const iframe = document.querySelector('#blog_post_content_ifr');
   if (iframe && iframe.contentWindow) {
+    const style = iframe.contentDocument.createElement('style');
+    style.textContent = 'a { color: #A08FFF !important; }';
+    iframe.contentDocument.head.appendChild(style);
     iframe.contentWindow.focus();
   }
 
   await KajabiDOM.delay(500);
 
+  fillKajabiMetadata(article);
+  console.log('[Kajabi Injector] ✅ Metadata fields filled');
+
   console.log('[Kajabi Injector] ═══════════════════════════════════════');
   console.log('[Kajabi Injector] ✅ ✅ KAJABI INJECTION COMPLETE ✅ ✅');
+  console.log('[Kajabi Injector] Total blocks:', blockNumber);
+  console.log('[Kajabi Injector] Images uploaded:', uploadedImages);
   console.log('[Kajabi Injector] ═══════════════════════════════════════');
 
   return {
     title: article.title,
     contentBlocks: article.content.length,
-    contentLength: htmlContent.length
+    imagesUploaded: uploadedImages
   };
 }
 
-function buildKajabiHTML(article) {
+async function insertTextBlock(editorBody, block) {
   let html = '';
-
-  if (article.subtitle) {
-    html += `<h2>${escapeHTML(article.subtitle)}</h2>`;
-  }
-
-  for (const block of article.content) {
-    switch (block.type) {
-      case 'h1':
-        html += `<h1>${block.content}</h1>`;
-        break;
-      case 'h2':
-        html += `<h2>${block.content}</h2>`;
-        break;
-      case 'h3':
-        html += `<h3>${block.content}</h3>`;
-        break;
-      case 'h4':
-        html += `<h4>${block.content}</h4>`;
-        break;
-      case 'p':
-        html += `<p>${block.content}</p>`;
-        break;
-      case 'blockquote':
-      case 'quote':
-        html += `<blockquote><p>${block.content}</p></blockquote>`;
-        break;
-      case 'ul':
-        html += '<ul>';
-        block.items.forEach(item => {
-          html += `<li>${escapeHTML(item)}</li>`;
-        });
-        html += '</ul>';
-        break;
-      case 'ol':
-        html += '<ol>';
-        block.items.forEach(item => {
-          html += `<li>${escapeHTML(item)}</li>`;
-        });
-        html += '</ol>';
-        break;
-      case 'image':
-        if (block.dataURL) {
-          html += `<p><img src="${block.dataURL}" alt="${escapeHTML(block.alt || '')}" style="max-width: 100%; height: auto;" /></p>`;
-          if (block.caption) {
-            html += `<p><em>${escapeHTML(block.caption)}</em></p>`;
-          }
-        }
-        break;
-      case 'code':
-        html += `<blockquote><p><em>${block.content}</em></p></blockquote>`;
-        break;
-    }
-  }
-
-  console.log('[Kajabi Injector] Built HTML with', article.content.length, 'blocks');
   
-  return html;
+  switch (block.type) {
+    case 'h1':
+      html = `<h1>${block.content}</h1>`;
+      break;
+    case 'h2':
+      html = `<h2>${block.content}</h2>`;
+      break;
+    case 'h3':
+      html = `<h3>${block.content}</h3>`;
+      break;
+    case 'h4':
+      html = `<h4>${block.content}</h4>`;
+      break;
+    case 'p':
+      html = `<p>${block.content}</p>`;
+      break;
+    case 'blockquote':
+    case 'quote':
+      html = `<blockquote><p>${block.content}</p></blockquote>`;
+      break;
+  }
+  
+  editorBody.innerHTML += html;
+  await KajabiDOM.delay(100);
 }
+
+async function insertListBlock(editorBody, block) {
+  const listType = block.type === 'ul' ? 'ul' : 'ol';
+  let html = `<${listType}>`;
+  block.items.forEach(item => {
+    html += `<li>${escapeHTML(item)}</li>`;
+  });
+  html += `</${listType}>`;
+  
+  editorBody.innerHTML += html;
+  await KajabiDOM.delay(100);
+}
+
+async function insertCodeBlock(editorBody, block) {
+  const html = `<blockquote><p><em>${block.content}</em></p></blockquote>`;
+  editorBody.innerHTML += html;
+  await KajabiDOM.delay(100);
+}
+
+async function insertImagePlaceholder(editorBody, block) {
+  const html = `<p><em>[Image: ${escapeHTML(block.alt || 'Image')}]</em></p>`;
+  editorBody.innerHTML += html;
+  await KajabiDOM.delay(100);
+}
+
 
 function escapeHTML(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function fillKajabiMetadata(article) {
+  const slugField = document.querySelector('#blog_post\\[slug\\]') || 
+                   document.querySelector('input[name="blog_post[slug]"]');
+  if (slugField) {
+    slugField.value = 'test_stuff';
+    slugField.dispatchEvent(new Event('input', { bubbles: true }));
+    slugField.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log('[Kajabi Injector] Filled slug field');
+  }
+
+  const pageTitleField = document.querySelector('#blog_post_page_title') || 
+                        document.querySelector('input[name="blog_post[page_title]"]');
+  if (pageTitleField) {
+    pageTitleField.value = 'test_stuff';
+    pageTitleField.dispatchEvent(new Event('input', { bubbles: true }));
+    pageTitleField.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log('[Kajabi Injector] Filled page title field');
+  }
+
+  const pageDescField = document.querySelector('#blog_post_page_description') || 
+                       document.querySelector('textarea[name="blog_post[page_description]"]');
+  if (pageDescField) {
+    pageDescField.value = 'test_stuff';
+    pageDescField.dispatchEvent(new Event('input', { bubbles: true }));
+    pageDescField.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log('[Kajabi Injector] Filled page description field');
+  }
+
+  const imageAltField = document.querySelector('#blog_post_image_alt_text') || 
+                       document.querySelector('input[name="blog_post[image_alt_text]"]');
+  if (imageAltField) {
+    imageAltField.value = 'test_stuff';
+    imageAltField.dispatchEvent(new Event('input', { bubbles: true }));
+    imageAltField.dispatchEvent(new Event('change', { bubbles: true }));
+    console.log('[Kajabi Injector] Filled image alt text field');
+  }
 }
 
