@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Medium to LinkedIn Article Publisher",
-  "version": "1.10.2",
+  "version": "1.10.3",
   "description": "Extract Medium articles and publish them to LinkedIn with one click",
   "permissions": [
     "activeTab",

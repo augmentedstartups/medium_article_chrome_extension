@@ -89,7 +89,7 @@ async function injectArticleToKajabi(article) {
 
   await KajabiDOM.delay(500);
 
-  fillKajabiMetadata(article);
+  await fillKajabiMetadata(article);
   console.log('[Kajabi Injector] ✅ Metadata fields filled');
 
   console.log('[Kajabi Injector] ═══════════════════════════════════════');
@@ -201,7 +201,7 @@ function escapeHTML(text) {
   return div.innerHTML;
 }
 
-function fillKajabiMetadata(article) {
+async function fillKajabiMetadata(article) {
   const slug = article.title
     .toLowerCase()
     .replace(/\s+/g, '_')
@@ -225,22 +225,58 @@ function fillKajabiMetadata(article) {
     console.log('[Kajabi Injector] Filled page title field with article title:', article.title);
   }
 
-  const pageDescField = document.querySelector('#blog_post_page_description') || 
-                       document.querySelector('textarea[name="blog_post[page_description]"]');
-  if (pageDescField) {
-    pageDescField.value = 'test_stuff';
-    pageDescField.dispatchEvent(new Event('input', { bubbles: true }));
-    pageDescField.dispatchEvent(new Event('change', { bubbles: true }));
-    console.log('[Kajabi Injector] Filled page description field');
-  }
+  console.log('[Kajabi Injector] 🤖 Generating AI-powered SEO content...');
+  
+  try {
+    const articleContentText = article.content
+      .filter(block => block.type === 'p' || block.type.startsWith('h'))
+      .map(block => block.content)
+      .join(' ');
 
-  const imageAltField = document.querySelector('#blog_post_image_alt_text') || 
-                       document.querySelector('input[name="blog_post[image_alt_text]"]');
-  if (imageAltField) {
-    imageAltField.value = 'test_stuff';
-    imageAltField.dispatchEvent(new Event('input', { bubbles: true }));
-    imageAltField.dispatchEvent(new Event('change', { bubbles: true }));
-    console.log('[Kajabi Injector] Filled image alt text field');
+    const description = await OpenRouterService.generatePageDescription(
+      article.title, 
+      article.subtitle || '', 
+      articleContentText
+    );
+    
+    const pageDescField = document.querySelector('#blog_post_page_description') || 
+                         document.querySelector('textarea[name="blog_post[page_description]"]');
+    if (pageDescField) {
+      pageDescField.value = description;
+      pageDescField.dispatchEvent(new Event('input', { bubbles: true }));
+      pageDescField.dispatchEvent(new Event('change', { bubbles: true }));
+      console.log('[Kajabi Injector] ✅ AI-generated description:', description);
+    }
+
+    const altText = await OpenRouterService.generateImageAltText(article.title);
+    
+    const imageAltField = document.querySelector('#blog_post_image_alt_text') || 
+                         document.querySelector('input[name="blog_post[image_alt_text]"]');
+    if (imageAltField) {
+      imageAltField.value = altText;
+      imageAltField.dispatchEvent(new Event('input', { bubbles: true }));
+      imageAltField.dispatchEvent(new Event('change', { bubbles: true }));
+      console.log('[Kajabi Injector] ✅ AI-generated alt text:', altText);
+    }
+    
+  } catch (error) {
+    console.error('[Kajabi Injector] ⚠️ AI generation failed, using fallbacks:', error);
+    
+    const pageDescField = document.querySelector('#blog_post_page_description') || 
+                         document.querySelector('textarea[name="blog_post[page_description]"]');
+    if (pageDescField && !pageDescField.value) {
+      pageDescField.value = article.subtitle || article.title;
+      pageDescField.dispatchEvent(new Event('input', { bubbles: true }));
+      console.log('[Kajabi Injector] Using subtitle as fallback description');
+    }
+
+    const imageAltField = document.querySelector('#blog_post_image_alt_text') || 
+                         document.querySelector('input[name="blog_post[image_alt_text]"]');
+    if (imageAltField && !imageAltField.value) {
+      imageAltField.value = `Featured image for ${article.title}`;
+      imageAltField.dispatchEvent(new Event('input', { bubbles: true }));
+      console.log('[Kajabi Injector] Using title-based fallback alt text');
+    }
   }
 }
 

@@ -3,13 +3,24 @@ const OpenRouterService = {
   API_URL: 'https://openrouter.ai/api/v1/chat/completions',
   MODEL: 'google/gemma-3-27b-it:free',
 
-  async generatePageDescription(articleTitle, articleSubtitle = '') {
+  async generatePageDescription(articleTitle, articleSubtitle = '', articleContent = '') {
     try {
       console.log('[OpenRouter] Generating page description for:', articleTitle);
+      
+      let contentPreview = '';
+      if (articleContent && articleContent.trim()) {
+        const cleanContent = articleContent
+          .replace(/<[^>]*>/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        contentPreview = cleanContent.substring(0, 500);
+        console.log('[OpenRouter] Using article content for context (500 chars)');
+      }
       
       const prompt = `Generate a concise SEO meta description (maximum 160 characters) for this article:
 Title: "${articleTitle}"
 ${articleSubtitle ? `Subtitle: "${articleSubtitle}"` : ''}
+${contentPreview ? `\nContent Preview: "${contentPreview}..."` : ''}
 
 Return ONLY the description text, nothing else.`;
 

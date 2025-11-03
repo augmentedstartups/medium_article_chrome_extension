@@ -79,7 +79,17 @@ async function testAIGeneration(button) {
     const title = titleField.value;
     console.log('[Kajabi AI Test] Using title:', title);
 
-    const description = await OpenRouterService.generatePageDescription(title);
+    const iframe = document.querySelector('#blog_post_content_ifr');
+    let articleContent = '';
+    if (iframe) {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      if (iframeDoc && iframeDoc.body) {
+        articleContent = iframeDoc.body.innerText || iframeDoc.body.textContent || '';
+        console.log('[Kajabi AI Test] Found article content:', articleContent.length, 'characters');
+      }
+    }
+
+    const description = await OpenRouterService.generatePageDescription(title, '', articleContent);
     console.log('[Kajabi AI Test] ✅ Description generated:', description);
 
     button.textContent = '🖼️ Generating Alt Text...';
