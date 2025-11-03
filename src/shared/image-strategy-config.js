@@ -14,11 +14,11 @@ const StrategyDescriptions = {
     likelihood: 'Low - probably blocked'
   },
   FILE_UPLOAD: {
-    name: 'File Upload',
+    name: 'File Upload (RECOMMENDED)',
     description: 'Uploads each image individually via LinkedIn\'s upload button (like cover image)',
-    pros: 'Most reliable - uses LinkedIn\'s native upload',
-    cons: 'Slow (2-5s per image)',
-    likelihood: 'High - should work'
+    pros: 'Most reliable - uses LinkedIn\'s native upload, images persist on refresh',
+    cons: 'Slower (2-5s per image)',
+    likelihood: 'High - working ✓'
   },
   USER_PASTE: {
     name: 'User Paste',
@@ -36,7 +36,7 @@ const StrategyDescriptions = {
   }
 };
 
-const DEFAULT_STRATEGY = ImageStrategy.CLIPBOARD_API;
+const DEFAULT_STRATEGY = ImageStrategy.FILE_UPLOAD;
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { ImageStrategy, StrategyDescriptions, DEFAULT_STRATEGY };

@@ -8,11 +8,11 @@ const StrategyDescriptions = {
     likelihoodClass: 'low'
   },
   FILE_UPLOAD: {
-    name: 'File Upload',
+    name: 'File Upload (RECOMMENDED)',
     description: 'Uploads each image individually via LinkedIn\'s upload button (like cover image)',
-    pros: 'Most reliable - uses LinkedIn\'s native upload',
-    cons: 'Slow (2-5s per image)',
-    likelihood: 'High - should work',
+    pros: 'Most reliable - uses LinkedIn\'s native upload, images persist on refresh',
+    cons: 'Slower (2-5s per image)',
+    likelihood: 'High - working ✓',
     likelihoodClass: 'high'
   },
   USER_PASTE: {
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadSelectedStrategy() {
   const result = await chrome.storage.sync.get(['imageStrategy']);
-  const strategy = result.imageStrategy || 'CLIPBOARD_API';
+  const strategy = result.imageStrategy || 'FILE_UPLOAD';
   
   document.getElementById('strategySelector').value = strategy;
   updateStrategyDescription(strategy);

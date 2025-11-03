@@ -30,60 +30,22 @@ async function retryBodyPasteOnly(article) {
   const editor = await LinkedInDOM.waitForEditor();
   console.log('[LinkedIn Injector] ✅ Editor found');
   
-  const htmlContent = buildHTMLContent(article, true);
-  console.log('[LinkedIn Injector] Built HTML content, length:', htmlContent.length);
-  
   console.log('[LinkedIn Injector] Clearing existing content...');
   editor.innerHTML = '';
-  await RetryHandler.delay(300);
+  await RetryHandler.delay(500);
   
-  let contentInserted = false;
-  let attempts = 0;
-  const maxAttempts = 3;
-  
-  while (!contentInserted && attempts < maxAttempts) {
-    attempts++;
-    console.log(`[LinkedIn Injector] 🔄 MANUAL RETRY ATTEMPT ${attempts}/${maxAttempts}`);
-    
-    editor.focus();
-    await RetryHandler.delay(200);
-    
-    editor.innerHTML = htmlContent;
-    
-    const inputEvent = new Event('input', { bubbles: true });
-    editor.dispatchEvent(inputEvent);
-    
-    const changeEvent = new Event('change', { bubbles: true });
-    editor.dispatchEvent(changeEvent);
-    
-    await RetryHandler.delay(500);
-    
-    const currentContent = editor.innerHTML || editor.textContent || '';
-    const currentLength = currentContent.trim().length;
-    console.log('[LinkedIn Injector] Content check - Length:', currentLength, 'chars');
-    
-    if (currentLength >= 100) {
-      contentInserted = true;
-      console.log('[LinkedIn Injector] ✅ ✅ MANUAL RETRY SUCCESSFUL');
-      console.log('[LinkedIn Injector] Final length:', currentLength, 'chars');
-    } else if (attempts < maxAttempts) {
-      console.error('[LinkedIn Injector] ❌ Manual attempt failed - Content still empty');
-      await RetryHandler.delay(1000);
-    }
-  }
-  
-  if (!contentInserted) {
-    console.error('[LinkedIn Injector] ❌ MANUAL RETRY FAILED after', maxAttempts, 'attempts');
-    throw new Error('Manual retry failed after ' + maxAttempts + ' attempts');
-  }
+  console.log('[LinkedIn Injector] Using FILE_UPLOAD strategy for body');
+  const bodyResult = await FileUploadStrategy.inject(editor, article);
   
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
   console.log('[LinkedIn Injector] ✅ ✅ MANUAL RETRY COMPLETE ✅ ✅');
+  console.log('[LinkedIn Injector] Result:', bodyResult);
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
   
   return {
     success: true,
-    attempts: attempts,
+    strategy: 'FILE_UPLOAD',
+    bodyResult: bodyResult,
     contentLength: editor.innerHTML.length
   };
 }
@@ -113,11 +75,6 @@ async function performInjection(article) {
   console.log('[LinkedIn Injector] 🚀 STARTING INJECTION PROCESS');
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
   
-  const { imageStrategy } = await chrome.storage.sync.get(['imageStrategy']);
-  const strategy = imageStrategy || 'CLIPBOARD_API';
-  
-  console.log('[LinkedIn Injector] 📌 Selected Strategy:', strategy);
-  
   const titleField = await LinkedInDOM.waitForTitleField();
   LinkedInDOM.setInputValue(titleField, article.title);
   console.log('[LinkedIn Injector] ✅ Title injected:', article.title);
@@ -127,44 +84,12 @@ async function performInjection(article) {
   const editor = await LinkedInDOM.waitForEditor();
   console.log('[LinkedIn Injector] ✅ Editor found');
   
-  await RetryHandler.delay(Config.delays.editorReady);
-  
-  let bodyResult;
-  
-  try {
-    switch(strategy) {
-      case 'CLIPBOARD_API':
-        console.log('[LinkedIn Injector] Using Clipboard API Strategy');
-        bodyResult = await ClipboardAPIStrategy.inject(editor, article);
-        break;
-      case 'FILE_UPLOAD':
-        console.log('[LinkedIn Injector] Using File Upload Strategy');
-        bodyResult = await FileUploadStrategy.inject(editor, article);
-        break;
-      case 'USER_PASTE':
-        console.log('[LinkedIn Injector] Using User Paste Strategy');
-        bodyResult = await UserPasteStrategy.inject(editor, article);
-        break;
-      case 'PROSEMIRROR':
-        console.log('[LinkedIn Injector] Using ProseMirror Strategy');
-        bodyResult = await ProseMirrorStrategy.inject(editor, article);
-        break;
-      default:
-        throw new Error('Unknown strategy: ' + strategy);
-    }
-  } catch (error) {
-    console.error('[LinkedIn Injector] Strategy failed:', error);
-    throw error;
-  }
-  
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
-  console.log('[LinkedIn Injector] ✅ PHASE 1 COMPLETE: BODY CONTENT INJECTED');
-  console.log('[LinkedIn Injector] Strategy:', strategy);
-  console.log('[LinkedIn Injector] Result:', bodyResult);
+  console.log('[LinkedIn Injector] ⏭️  SKIPPING BODY - Use Retry Button');
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
 
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
-  console.log('[LinkedIn Injector] 🖼️  PHASE 2: UPLOAD COVER IMAGE');
+  console.log('[LinkedIn Injector] 🖼️  UPLOADING COVER IMAGE');
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
 
   let coverImageUploaded = false;
@@ -183,29 +108,16 @@ async function performInjection(article) {
     console.log('[LinkedIn Injector] ⚠️  No images available for cover upload');
   }
 
-  await RetryHandler.delay(500);
-  const finalContent = editor.innerHTML || editor.textContent;
-  const verification = await RetryHandler.verifyImagesLoaded(editor);
-  
-  console.log('[LinkedIn Injector] ───────────────────────────────────────');
-  console.log('[LinkedIn Injector] 📊 FINAL VERIFICATION');
-  console.log('[LinkedIn Injector] ───────────────────────────────────────');
-  console.log('[LinkedIn Injector] Body images loaded:', verification.loaded);
-  console.log('[LinkedIn Injector] Body images failed:', verification.failed);
-  console.log('[LinkedIn Injector] Final content length:', finalContent.length, 'chars');
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
-  console.log('[LinkedIn Injector] ✅ ✅ INJECTION COMPLETE ✅ ✅');
+  console.log('[LinkedIn Injector] ✅ TITLE + COVER IMAGE COMPLETE');
+  console.log('[LinkedIn Injector] 📌 Click "Retry Body" button to insert body content');
   console.log('[LinkedIn Injector] ═══════════════════════════════════════');
 
   return {
     title: article.title,
-    contentBlocks: article.content.length,
-    imagesInjected: article.images.length,
-    imagesVerified: verification,
     coverImageUploaded: coverImageUploaded,
-    finalContentLength: finalContent.length,
-    strategy: strategy,
-    bodyResult: bodyResult
+    bodySkipped: true,
+    message: 'Title and cover uploaded. Click Retry Body button to insert content.'
   };
 }
 

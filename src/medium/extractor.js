@@ -151,7 +151,22 @@ async function extractMediumArticle() {
   });
   console.table(breakdown);
 
-  console.log('[Medium Extractor] First 3 content blocks:', article.content.slice(0, 3));
+  console.log('[Medium Extractor] Image blocks verification:');
+  const imageBlocks = article.content.filter(b => b.type === 'image');
+  imageBlocks.forEach((block, i) => {
+    console.log(`Image ${i + 1}:`, {
+      hasDataURL: !!block.dataURL,
+      hasSrc: !!block.src,
+      dataURLLength: block.dataURL ? block.dataURL.length : 0,
+      srcPreview: block.src ? block.src.substring(0, 50) : 'none'
+    });
+  });
+
+  console.log('[Medium Extractor] article.images array:', article.images.map(img => ({
+    hasDataURL: !!img.dataURL,
+    hasOriginal: !!img.original,
+    dataURLLength: img.dataURL ? img.dataURL.length : 0
+  })));
 
   return article;
 }

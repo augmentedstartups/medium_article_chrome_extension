@@ -51,6 +51,10 @@ const TestData = {
         {
           type: 'p',
           content: 'Conclusion paragraph to wrap up the test article.'
+        },
+        {
+          type: 'p',
+          content: ''
         }
       ],
       images: [

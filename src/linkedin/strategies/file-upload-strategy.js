@@ -90,7 +90,7 @@ const FileUploadStrategy = {
     selection.removeAllRanges();
     selection.addRange(range);
     
-    document.execCommand('insertHTML', false, `<p class="article-editor-paragraph">${text}</p>`);
+    document.execCommand('insertHTML', false, `<p class="article-editor-paragraph">${text}</p><p class="article-editor-paragraph"><br></p>`);
     
     await RetryHandler.delay(200);
   },
