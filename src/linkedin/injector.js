@@ -32,8 +32,8 @@ async function retryBodyPasteOnly(article) {
   
   console.log('[LinkedIn Injector] Clearing existing content...');
   editor.innerHTML = '';
-  await RetryHandler.delay(500);
-  
+    await RetryHandler.delay(500);
+    
   console.log('[LinkedIn Injector] Using FILE_UPLOAD strategy for body');
   const bodyResult = await FileUploadStrategy.inject(editor, article);
   
@@ -83,7 +83,7 @@ async function performInjection(article) {
 
   const editor = await LinkedInDOM.waitForEditor();
   console.log('[LinkedIn Injector] ✅ Editor found');
-
+  
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
   console.log('[LinkedIn Injector] 🖼️  PHASE 1: UPLOADING COVER IMAGE');
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
@@ -122,7 +122,7 @@ async function performInjection(article) {
   await RetryHandler.delay(500);
   const finalContent = editor.innerHTML || editor.textContent;
   const verification = await RetryHandler.verifyImagesLoaded(editor);
-
+  
   console.log('[LinkedIn Injector] ───────────────────────────────────────');
   console.log('[LinkedIn Injector] 📊 FINAL VERIFICATION');
   console.log('[LinkedIn Injector] ───────────────────────────────────────');

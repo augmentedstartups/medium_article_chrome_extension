@@ -49,8 +49,7 @@
         "src/kajabi/dom-utils.js",
         "src/kajabi/image-uploader.js",
         "src/kajabi/injector.js",
-        "src/kajabi/settings-panel.js",
-        "src/kajabi/test-image-upload-button.js"
+        "src/kajabi/settings-panel.js"
       ],
       "run_at": "document_idle"
     }

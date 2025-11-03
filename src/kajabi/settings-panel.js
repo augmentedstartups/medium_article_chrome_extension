@@ -25,6 +25,7 @@ class KajabiSettingsPanel {
   async init() {
     await this.loadSettings();
     this.injectSettingsButton();
+    this.injectRegenerateButton();
   }
 
   async loadSettings() {
@@ -83,6 +84,51 @@ class KajabiSettingsPanel {
 
     document.body.appendChild(button);
     console.log('[Kajabi Settings] ✅ Settings button injected');
+  }
+
+  injectRegenerateButton() {
+    if (document.getElementById('kajabi-regenerate-btn')) {
+      return;
+    }
+
+    const button = document.createElement('button');
+    button.id = 'kajabi-regenerate-btn';
+    button.innerHTML = '🔄';
+    button.title = 'Regenerate SEO & Alt Text';
+    button.style.cssText = `
+      position: fixed;
+      top: 240px;
+      right: 20px;
+      z-index: 999999;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      transition: all 0.3s ease;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    `;
+
+    button.addEventListener('mouseenter', () => {
+      button.style.transform = 'scale(1.1) rotate(180deg)';
+      button.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.6)';
+    });
+
+    button.addEventListener('mouseleave', () => {
+      button.style.transform = 'scale(1) rotate(0deg)';
+      button.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.4)';
+    });
+
+    button.addEventListener('click', () => {
+      this.regenerateSEOContent();
+    });
+
+    document.body.appendChild(button);
+    console.log('[Kajabi Settings] ✅ Regenerate button injected');
   }
 
   togglePanel() {
@@ -319,6 +365,91 @@ class KajabiSettingsPanel {
         testBtn.textContent = originalText;
         testBtn.style.background = '#10B981';
         testBtn.disabled = false;
+      }, 3000);
+    }
+  }
+
+  async regenerateSEOContent() {
+    const button = document.getElementById('kajabi-regenerate-btn');
+    const originalText = button.innerHTML;
+
+    try {
+      button.disabled = true;
+      button.innerHTML = '⏳';
+      button.style.background = '#6B7280';
+      
+      console.log('[Kajabi Settings] 🔄 Regenerating SEO content...');
+
+      const titleField = document.querySelector('input[name="blog_post[title]"]') || 
+                        document.querySelector('#blog_post_title');
+      const articleTitle = titleField?.value || '';
+      
+      if (!articleTitle) {
+        throw new Error('Article title not found. Please ensure you are on a blog post edit page.');
+      }
+
+      const iframe = document.querySelector('#blog_post_content_ifr');
+      let articleContent = '';
+      if (iframe?.contentDocument?.body) {
+        articleContent = iframe.contentDocument.body.innerText || '';
+      }
+
+      await OpenRouterService.reloadSettings();
+
+      const description = await OpenRouterService.generatePageDescription(
+        articleTitle, 
+        '', 
+        articleContent
+      );
+      
+      const pageDescField = document.querySelector('#blog_post_page_description') || 
+                           document.querySelector('textarea[name="blog_post[page_description]"]');
+      if (pageDescField) {
+        pageDescField.value = description;
+        pageDescField.dispatchEvent(new Event('input', { bubbles: true }));
+        pageDescField.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log('[Kajabi Settings] ✅ Description regenerated:', description);
+      }
+
+      const altText = await OpenRouterService.generateImageAltText(articleTitle);
+      
+      const imageAltField = document.querySelector('#blog_post_image_alt_text') || 
+                           document.querySelector('input[name="blog_post[image_alt_text]"]');
+      if (imageAltField) {
+        imageAltField.value = altText;
+        imageAltField.dispatchEvent(new Event('input', { bubbles: true }));
+        imageAltField.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log('[Kajabi Settings] ✅ Alt text regenerated:', altText);
+      }
+
+      button.innerHTML = '✅';
+      button.style.background = '#10B981';
+
+      console.log('[Kajabi Settings] ✅ SEO content regenerated successfully');
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+        button.disabled = false;
+      }, 2000);
+
+    } catch (error) {
+      console.error('[Kajabi Settings] ❌ Regeneration failed:', error);
+      
+      button.innerHTML = '❌';
+      button.style.background = '#EF4444';
+
+      let errorMsg = error.message;
+      if (errorMsg.includes('401') || errorMsg.includes('User not found')) {
+        errorMsg = 'API key is invalid. Please update it in settings (⚙️).';
+      }
+
+      alert(`❌ SEO Regeneration Failed\n\n${errorMsg}\n\nPlease check your API key in settings.`);
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+        button.disabled = false;
       }, 3000);
     }
   }
