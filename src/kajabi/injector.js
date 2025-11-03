@@ -262,6 +262,10 @@ async function fillKajabiMetadata(article) {
   } catch (error) {
     console.error('[Kajabi Injector] ⚠️ AI generation failed, using fallbacks:', error);
     
+    if (error.message.includes('401') || error.message.includes('User not found')) {
+      alert('❌ OpenRouter API Key Invalid!\n\nYour OpenRouter API key is not working (401 error).\n\nPlease:\n1. Go to https://openrouter.ai/keys\n2. Generate a new API key\n3. Click the ⚙️ settings button to update it\n\nUsing fallback text for now.');
+    }
+    
     const pageDescField = document.querySelector('#blog_post_page_description') || 
                          document.querySelector('textarea[name="blog_post[page_description]"]');
     if (pageDescField && !pageDescField.value) {

@@ -2,17 +2,17 @@ console.log('[Kajabi Settings] Initializing settings panel...');
 
 const OPENROUTER_MODELS = [
   { id: 'google/gemma-3-27b-it:free', name: 'Gemma 3 27B (Free)' },
-  { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B (Free)' },
-  { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B (Free)' },
-  { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B (Free)' },
-  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B (Free)' },
-  { id: 'qwen/qwen-2-7b-instruct:free', name: 'Qwen 2 7B (Free)' }
+  { id: 'openai/gpt-oss-20b:free', name: 'GPT OSS 20B (Free)' },
+  { id: 'deepseek/deepseek-chat-v3.1:free', name: 'DeepSeek Chat v3.1 (Free)' },
+  { id: 'moonshotai/kimi-k2:free', name: 'Kimi K2 (Free)' },
+  { id: 'qwen/qwen3-30b-a3b:free', name: 'Qwen 3 30B (Free)' }
 ];
 
 const DEFAULT_SETTINGS = {
+  apiKey: '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',
   model: 'google/gemma-3-27b-it:free',
-  descriptionPrompt: 'You are an expert SEO copywriter. Write compelling meta descriptions that improve search rankings. Rules: NO emojis, NO hashtags, NO colons at the start, NO quotes. Use action words, include keywords naturally, create urgency or value. Focus on benefits and clarity. Maximum 160 characters. Start directly with engaging content.',
-  altTextPrompt: 'You are an accessibility and SEO expert. Generate descriptive image alt text for featured blog images. Rules: NO emojis, NO hashtags, NO quotes. Be specific and descriptive. Include relevant keywords naturally. Maximum 125 characters. Describe what the image would show for the alt text. The alt text should be a single sentence that describes the image.'
+  descriptionPrompt: 'You are an expert SEO copywriter. Write a compelling meta description that improves search rankings. CRITICAL RULES: 1) DO NOT just repeat the title 2) NO emojis, NO hashtags, NO colons, NO quotes 3) Use action words and power verbs 4) Include main keywords naturally 5) Create urgency or highlight value proposition 6) Focus on benefits and what readers will learn 7) Maximum 160 characters 8) Must be different from the title. Generate an engaging description that makes people want to click.',
+  altTextPrompt: 'You are an accessibility and SEO expert. Generate descriptive alt text for the article hero image. CRITICAL RULES: 1) DO NOT use phrases like "featured image", "image of", "picture of" 2) NO emojis, NO hashtags, NO quotes 3) Describe what is visually shown in the image 4) Be specific and descriptive 5) Include relevant keywords naturally 6) Maximum 125 characters 7) Write as if describing the image to someone who cannot see it. Just describe the visual content directly.'
 };
 
 class KajabiSettingsPanel {
@@ -125,6 +125,17 @@ class KajabiSettingsPanel {
         
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">
+            OpenRouter API Key
+          </label>
+          <input id="api-key-input" type="password" placeholder="sk-or-v1-..." style="width: 100%; padding: 10px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 14px; font-family: monospace;" value="${this.settings.apiKey || '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'}">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+            <p style="font-size: 12px; color: #6B7280; margin: 0;">Get your API key from <a href="https://openrouter.ai/keys" target="_blank" style="color: #667eea;">openrouter.ai/keys</a></p>
+            <button id="test-api-key" style="padding: 6px 12px; background: #10B981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">Test API Key</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #374151;">
             OpenRouter Model
           </label>
           <select id="model-select" style="width: 100%; padding: 10px; border: 2px solid #E5E7EB; border-radius: 8px; font-size: 14px; background: white;">
@@ -185,6 +196,7 @@ class KajabiSettingsPanel {
     
     document.getElementById('save-settings').addEventListener('click', () => this.handleSave());
     document.getElementById('reset-settings').addEventListener('click', () => this.handleReset());
+    document.getElementById('test-api-key').addEventListener('click', () => this.handleTestAPI());
 
     this.isOpen = true;
     console.log('[Kajabi Settings] Panel opened');
@@ -202,11 +214,13 @@ class KajabiSettingsPanel {
   }
 
   async handleSave() {
+    const apiKey = document.getElementById('api-key-input').value;
     const model = document.getElementById('model-select').value;
     const descriptionPrompt = document.getElementById('description-prompt').value;
     const altTextPrompt = document.getElementById('alttext-prompt').value;
 
     this.settings = {
+      apiKey,
       model,
       descriptionPrompt,
       altTextPrompt
@@ -235,11 +249,78 @@ class KajabiSettingsPanel {
     this.settings = { ...DEFAULT_SETTINGS };
     await this.saveSettings();
 
+    document.getElementById('api-key-input').value = this.settings.apiKey;
     document.getElementById('model-select').value = this.settings.model;
     document.getElementById('description-prompt').value = this.settings.descriptionPrompt;
     document.getElementById('alttext-prompt').value = this.settings.altTextPrompt;
 
     console.log('[Kajabi Settings] ✅ Settings reset to defaults');
+  }
+
+  async handleTestAPI() {
+    const testBtn = document.getElementById('test-api-key');
+    const originalText = testBtn.textContent;
+    const apiKeyInput = document.getElementById('api-key-input');
+    const apiKey = apiKeyInput.value;
+
+    if (!apiKey || !apiKey.startsWith('sk-or-v1-')) {
+      alert('❌ Invalid API Key Format\n\nAPI key should start with "sk-or-v1-"');
+      return;
+    }
+
+    try {
+      testBtn.disabled = true;
+      testBtn.textContent = '⏳ Testing...';
+      testBtn.style.background = '#6B7280';
+
+      const tempKey = OpenRouterService.API_KEY;
+      OpenRouterService.API_KEY = apiKey;
+
+      const result = await OpenRouterService.testConnection();
+
+      OpenRouterService.API_KEY = tempKey;
+
+      if (result.success) {
+        testBtn.textContent = '✅ Valid!';
+        testBtn.style.background = '#10B981';
+        console.log('[Kajabi Settings] ✅ API key test successful:', result.message);
+        
+        setTimeout(() => {
+          alert(`✅ API Key Valid!\n\nResponse: ${result.message}\n\nYou can now use this key for AI generation.`);
+        }, 100);
+      } else {
+        throw new Error(result.error);
+      }
+
+      setTimeout(() => {
+        testBtn.textContent = originalText;
+        testBtn.style.background = '#10B981';
+        testBtn.disabled = false;
+      }, 3000);
+
+    } catch (error) {
+      console.error('[Kajabi Settings] ❌ API key test failed:', error);
+      
+      testBtn.textContent = '❌ Invalid';
+      testBtn.style.background = '#EF4444';
+
+      let errorMsg = error.message;
+      if (errorMsg.includes('401')) {
+        errorMsg = 'API key is invalid or expired. Please get a new one from openrouter.ai/keys';
+      } else if (errorMsg.includes('403')) {
+        errorMsg = 'API key does not have permission to access this model';
+      } else if (errorMsg.includes('429')) {
+        errorMsg = 'Rate limit exceeded. Please wait and try again';
+      }
+
+      alert(`❌ API Key Test Failed\n\n${errorMsg}\n\nPlease check your API key and try again.`);
+
+      setTimeout(() => {
+        testBtn.textContent = originalText;
+        testBtn.style.background = '#10B981';
+        testBtn.disabled = false;
+      }, 3000);
+    }
   }
 }
 
