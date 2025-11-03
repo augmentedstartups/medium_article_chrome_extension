@@ -202,22 +202,27 @@ function escapeHTML(text) {
 }
 
 function fillKajabiMetadata(article) {
+  const slug = article.title
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w_-]/g, '');
+  
   const slugField = document.querySelector('#blog_post\\[slug\\]') || 
                    document.querySelector('input[name="blog_post[slug]"]');
   if (slugField) {
-    slugField.value = 'test_stuff';
+    slugField.value = slug;
     slugField.dispatchEvent(new Event('input', { bubbles: true }));
     slugField.dispatchEvent(new Event('change', { bubbles: true }));
-    console.log('[Kajabi Injector] Filled slug field');
+    console.log('[Kajabi Injector] Filled slug field:', slug);
   }
 
   const pageTitleField = document.querySelector('#blog_post_page_title') || 
                         document.querySelector('input[name="blog_post[page_title]"]');
   if (pageTitleField) {
-    pageTitleField.value = 'test_stuff';
+    pageTitleField.value = article.title;
     pageTitleField.dispatchEvent(new Event('input', { bubbles: true }));
     pageTitleField.dispatchEvent(new Event('change', { bubbles: true }));
-    console.log('[Kajabi Injector] Filled page title field');
+    console.log('[Kajabi Injector] Filled page title field with article title:', article.title);
   }
 
   const pageDescField = document.querySelector('#blog_post_page_description') || 

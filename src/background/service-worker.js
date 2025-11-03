@@ -211,17 +211,30 @@ async function handleKajabiInjection(article) {
   try {
     console.log('[Service Worker] Checking for Kajabi blog post tab...');
     
+    const kajabiNewPostURL = 'https://app.kajabi.com/admin/sites/104576/blog_posts/new';
     const tabs = await chrome.tabs.query({ url: 'https://app.kajabi.com/admin/sites/*/blog_posts/*' });
     
-    if (tabs.length === 0) {
-      throw new Error('Please open a Kajabi blog post page first (New or Edit)');
+    let tab;
+    let isNewTab = false;
+    
+    if (tabs.length > 0) {
+      tab = tabs[0];
+      console.log('[Service Worker] Found existing Kajabi tab:', tab.id);
+      await chrome.tabs.update(tab.id, { active: true });
+      console.log('[Service Worker] Waiting', Config.delays.existingTabWait, 'ms for existing tab...');
+      await new Promise(resolve => setTimeout(resolve, Config.delays.existingTabWait));
+    } else {
+      console.log('[Service Worker] Opening new Kajabi blog post page...');
+      tab = await chrome.tabs.create({ 
+        url: kajabiNewPostURL,
+        active: true 
+      });
+      console.log('[Service Worker] Kajabi tab opened:', tab.id);
+      await waitForTabLoad(tab.id);
+      console.log('[Service Worker] Waiting', Config.delays.newTabWait, 'ms for Kajabi editor...');
+      await new Promise(resolve => setTimeout(resolve, Config.delays.newTabWait));
+      isNewTab = true;
     }
-    
-    const tab = tabs[0];
-    console.log('[Service Worker] Found Kajabi tab:', tab.id);
-    await chrome.tabs.update(tab.id, { active: true });
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
     console.log('[Service Worker] Injecting article into Kajabi...');
     
@@ -238,6 +251,8 @@ async function handleKajabiInjection(article) {
     
     return {
       success: true,
+      tabId: tab.id,
+      isNewTab: isNewTab,
       result: response.result
     };
   } catch (error) {
