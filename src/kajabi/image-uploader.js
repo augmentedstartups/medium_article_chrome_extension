@@ -3,24 +3,8 @@ const KajabiImageUploader = {
     try {
       console.log(`[Kajabi Image] Starting upload for image ${imageNumber}`);
       
-      const iframe = document.querySelector('#blog_post_content_ifr');
-      if (iframe && iframe.contentWindow) {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        const body = iframeDoc.body;
-        
-        const range = iframeDoc.createRange();
-        range.selectNodeContents(body);
-        range.collapse(false);
-        
-        const selection = iframe.contentWindow.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        body.focus();
-        console.log('[Kajabi Image] Cursor positioned at end of content');
-      }
-      
-      await this.delay(300);
+      await this.ensureCursorAtEndForUpload();
+      await this.delay(500);
       
       const uploadBtn = await this.findImageUploadButton();
       console.log(`[Kajabi Image] Found upload button`);
@@ -176,6 +160,51 @@ const KajabiImageUploader = {
     
     console.log('[Kajabi Image] Modal still visible after timeout');
     return false;
+  },
+  
+  async ensureCursorAtEndForUpload() {
+    const iframe = document.querySelector('#blog_post_content_ifr');
+    if (!iframe || !iframe.contentWindow) {
+      console.log('[Kajabi Image] Cannot find iframe for cursor positioning');
+      return;
+    }
+    
+    try {
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+      const body = iframeDoc.body;
+      
+      body.click();
+      await this.delay(100);
+      
+      const lastChild = body.lastChild;
+      if (lastChild) {
+        const range = iframeDoc.createRange();
+        range.selectNodeContents(lastChild);
+        range.collapse(false);
+        
+        const selection = iframe.contentWindow.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        console.log('[Kajabi Image] ✓ Cursor positioned at end (last child)');
+      } else {
+        const range = iframeDoc.createRange();
+        range.selectNodeContents(body);
+        range.collapse(false);
+        
+        const selection = iframe.contentWindow.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        console.log('[Kajabi Image] ✓ Cursor positioned at end (body)');
+      }
+      
+      body.focus();
+      iframe.contentWindow.focus();
+      
+    } catch (error) {
+      console.error('[Kajabi Image] Failed to position cursor:', error);
+    }
   },
   
   async dataURLtoFile(dataURL, filename) {

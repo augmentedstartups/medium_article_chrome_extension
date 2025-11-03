@@ -43,6 +43,7 @@ async function injectArticleToKajabi(article) {
   let imageCount = 0;
   let uploadedImages = 0;
   let blockNumber = 0;
+  let isFirstImage = true;
 
   for (const block of article.content) {
     blockNumber++;
@@ -56,9 +57,16 @@ async function injectArticleToKajabi(article) {
       await insertCodeBlock(editorBody, block);
     } else if (block.type === 'image') {
       imageCount++;
+      
+      if (isFirstImage) {
+        console.log(`[Kajabi Injector] → ⏭️  Skipping first image (will be used elsewhere)`);
+        isFirstImage = false;
+        continue;
+      }
+      
       console.log(`[Kajabi Injector] → 🖼️ Uploading image ${imageCount}...`);
       
-      const success = await KajabiImageUploader.uploadImage(block, imageCount, editorBody);
+      const success = await KajabiImageUploader.uploadImage(block, imageCount - 1, editorBody);
       if (success) {
         uploadedImages++;
         console.log(`[Kajabi Injector] → ✅ Image ${imageCount} uploaded`);
@@ -124,6 +132,8 @@ async function insertTextBlock(editorBody, block) {
   
   editorBody.innerHTML += html;
   await KajabiDOM.delay(100);
+  
+  await ensureCursorAtEnd();
 }
 
 async function insertListBlock(editorBody, block) {
@@ -136,12 +146,16 @@ async function insertListBlock(editorBody, block) {
   
   editorBody.innerHTML += html;
   await KajabiDOM.delay(100);
+  
+  await ensureCursorAtEnd();
 }
 
 async function insertCodeBlock(editorBody, block) {
   const html = `<blockquote><p><em>${block.content}</em></p></blockquote>`;
   editorBody.innerHTML += html;
   await KajabiDOM.delay(100);
+  
+  await ensureCursorAtEnd();
 }
 
 async function insertImagePlaceholder(editorBody, block) {
@@ -150,6 +164,36 @@ async function insertImagePlaceholder(editorBody, block) {
   await KajabiDOM.delay(100);
 }
 
+
+async function ensureCursorAtEnd() {
+  const iframe = document.querySelector('#blog_post_content_ifr');
+  if (!iframe || !iframe.contentWindow) {
+    console.log('[Kajabi Injector] Cannot find iframe for cursor positioning');
+    return;
+  }
+  
+  try {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+    const body = iframeDoc.body;
+    
+    body.click();
+    await KajabiDOM.delay(50);
+    
+    const range = iframeDoc.createRange();
+    range.selectNodeContents(body);
+    range.collapse(false);
+    
+    const selection = iframe.contentWindow.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    body.focus();
+    
+    console.log('[Kajabi Injector] ✓ Cursor positioned at end');
+  } catch (error) {
+    console.error('[Kajabi Injector] Failed to position cursor:', error);
+  }
+}
 
 function escapeHTML(text) {
   const div = document.createElement('div');
