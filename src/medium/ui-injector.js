@@ -1,6 +1,9 @@
 let panel = null;
 let floatingButton = null;
 let kajabiButton = null;
+let combinedButton = null;
+let cachedArticle = null;
+let cacheTimestamp = null;
 
 function injectFloatingButton() {
   if (floatingButton) return;
@@ -84,6 +87,41 @@ function injectFloatingButton() {
     }
 
     #medium-kajabi-button.loading {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    #medium-combined-button {
+      position: fixed;
+      top: 140px;
+      right: 20px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 50px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+      z-index: 999999;
+      transition: all 0.3s ease;
+    }
+
+    #medium-combined-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+    }
+
+    #medium-combined-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    #medium-combined-button.loading {
       opacity: 0.7;
       cursor: wait;
     }
@@ -327,6 +365,103 @@ function injectKajabiButton() {
   console.log('[Medium UI] Kajabi button injected');
 }
 
+function injectCombinedButton() {
+  if (combinedButton) return;
+
+  combinedButton = document.createElement('div');
+  combinedButton.id = 'medium-combined-button';
+  combinedButton.innerHTML = `
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+    </svg>
+    <span>Post to LinkedIn + Kajabi</span>
+  `;
+  
+  combinedButton.title = 'Post to both LinkedIn and Kajabi simultaneously';
+
+  document.body.appendChild(combinedButton);
+
+  combinedButton.addEventListener('click', handleCombinedButtonClick);
+
+  console.log('[Medium UI] Combined button injected');
+}
+
+async function handleCombinedButtonClick() {
+  const originalHTML = combinedButton.innerHTML;
+  
+  try {
+    combinedButton.classList.add('loading');
+    combinedButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      <span>Extracting...</span>
+    `;
+
+    const article = await extractMediumArticle();
+
+    combinedButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      <span>Posting to LinkedIn...</span>
+    `;
+
+    const linkedInResponse = await chrome.runtime.sendMessage({
+      action: 'openLinkedInAndInject',
+      data: { article }
+    });
+
+    if (!linkedInResponse.success) {
+      throw new Error('LinkedIn: ' + linkedInResponse.error);
+    }
+
+    combinedButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+      </svg>
+      <span>Posting to Kajabi...</span>
+    `;
+
+    const kajabiResponse = await chrome.runtime.sendMessage({
+      action: 'openKajabiAndInject',
+      data: { article }
+    });
+
+    if (!kajabiResponse.success) {
+      throw new Error('Kajabi: ' + kajabiResponse.error);
+    }
+
+    combinedButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <span>Posted to Both! ✅</span>
+    `;
+
+    setTimeout(() => {
+      combinedButton.classList.remove('loading');
+      combinedButton.innerHTML = originalHTML;
+    }, 4000);
+
+  } catch (error) {
+    console.error('[Medium UI] Combined button error:', error);
+    combinedButton.classList.remove('loading');
+    combinedButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+      <span>Error: ${error.message.substring(0, 25)}...</span>
+    `;
+    
+    setTimeout(() => {
+      combinedButton.innerHTML = originalHTML;
+    }, 5000);
+  }
+}
+
 async function handleKajabiButtonClick() {
   const originalHTML = kajabiButton.innerHTML;
   
@@ -340,11 +475,6 @@ async function handleKajabiButtonClick() {
     `;
 
     const article = await extractMediumArticle();
-
-    await chrome.storage.local.set({
-      extractedArticle: article,
-      extractedAt: Date.now()
-    });
 
     kajabiButton.innerHTML = `
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -467,17 +597,16 @@ async function handleButtonClick() {
   openPanel();
   
   try {
-    if (typeof chrome === 'undefined' || !chrome.storage) {
+    if (typeof chrome === 'undefined' || !chrome.runtime) {
       console.error('[Medium UI] Chrome API not available');
       throw new Error('Chrome extension API not available');
     }
 
-    const result = await chrome.storage.local.get(['extractedArticle', 'extractedAt']);
     const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
     
-    if (result.extractedArticle && result.extractedAt && result.extractedAt > fiveMinutesAgo) {
+    if (cachedArticle && cacheTimestamp && cacheTimestamp > fiveMinutesAgo) {
       console.log('[Medium UI] Using cached article, auto-inserting...');
-      showExtractedState(result.extractedArticle);
+      showExtractedState(cachedArticle);
       setTimeout(() => {
         handleInsert();
       }, 500);
@@ -510,7 +639,7 @@ async function handleExtractAndInsert() {
   const previewDiv = document.getElementById('panel-preview');
 
   try {
-    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.runtime) {
+    if (typeof chrome === 'undefined' || !chrome.runtime) {
       throw new Error('Chrome extension API not available');
     }
 
@@ -520,10 +649,8 @@ async function handleExtractAndInsert() {
 
     const article = await extractMediumArticle();
 
-    await chrome.storage.local.set({
-      extractedArticle: article,
-      extractedAt: Date.now()
-    });
+    cachedArticle = article;
+    cacheTimestamp = Date.now();
 
     buildAndShowPreview(article);
 
@@ -669,7 +796,7 @@ async function handleExtract() {
   const previewDiv = document.getElementById('panel-preview');
 
   try {
-    if (typeof chrome === 'undefined' || !chrome.storage) {
+    if (typeof chrome === 'undefined') {
       throw new Error('Chrome extension API not available');
     }
 
@@ -679,10 +806,8 @@ async function handleExtract() {
 
     const article = await extractMediumArticle();
 
-    await chrome.storage.local.set({
-      extractedArticle: article,
-      extractedAt: Date.now()
-    });
+    cachedArticle = article;
+    cacheTimestamp = Date.now();
 
     buildAndShowPreview(article);
 
@@ -706,7 +831,7 @@ async function handleInsert() {
   const retrySection = document.getElementById('panel-retry-section');
 
   try {
-    if (typeof chrome === 'undefined' || !chrome.storage || !chrome.runtime) {
+    if (typeof chrome === 'undefined' || !chrome.runtime) {
       throw new Error('Chrome extension API not available');
     }
 
@@ -715,9 +840,7 @@ async function handleInsert() {
     insertBtn.disabled = true;
     retrySection.style.display = 'none';
 
-    const result = await chrome.storage.local.get(['extractedArticle']);
-
-    if (!result.extractedArticle) {
+    if (!cachedArticle) {
       throw new Error('No article to post. Please extract first.');
     }
 
@@ -725,7 +848,7 @@ async function handleInsert() {
 
     const response = await chrome.runtime.sendMessage({
       action: 'openLinkedInAndInject',
-      data: { article: result.extractedArticle }
+      data: { article: cachedArticle }
     });
 
     console.log('[Medium UI] Response from service worker:', response);
@@ -796,15 +919,17 @@ async function handleManualRetry() {
   }
 }
 
-if (typeof chrome !== 'undefined' && chrome.storage && chrome.runtime) {
+if (typeof chrome !== 'undefined' && chrome.runtime) {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       injectFloatingButton();
       injectKajabiButton();
+      injectCombinedButton();
     });
   } else {
     injectFloatingButton();
     injectKajabiButton();
+    injectCombinedButton();
   }
 } else {
   console.error('[Medium UI] Chrome extension API not available, skipping injection');

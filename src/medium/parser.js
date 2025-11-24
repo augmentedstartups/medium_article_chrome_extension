@@ -47,6 +47,8 @@ const MediumParser = {
           content += `<a href="${href}">${text}</a>`;
         } else if (tag === 'code') {
           content += `<em>${text}</em>`;
+        } else if (tag === 'br') {
+          content += '\n';
         } else {
           content += text;
         }
@@ -94,7 +96,35 @@ const MediumParser = {
     const items = [];
     
     element.querySelectorAll('li').forEach(li => {
-      items.push(li.textContent.trim());
+      // Use a helper to parse list item content while preserving basic formatting
+      let itemContent = '';
+      li.childNodes.forEach(node => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          itemContent += node.textContent;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const tag = node.tagName.toLowerCase();
+          const text = node.textContent;
+          
+          if (tag === 'strong' || tag === 'b') {
+            itemContent += `<strong>${text}</strong>`;
+          } else if (tag === 'em' || tag === 'i') {
+            itemContent += `<em>${text}</em>`;
+          } else if (tag === 'a') {
+            const href = node.getAttribute('href');
+            itemContent += `<a href="${href}">${text}</a>`;
+          } else if (tag === 'code') {
+            itemContent += `<em>${text}</em>`;
+          } else if (tag === 'br') {
+            itemContent += ' '; // Replace BR in lists with space to avoid merging
+          } else if (tag === 'p') {
+             // If list item contains paragraphs, append them with space
+             itemContent += (itemContent ? ' ' : '') + text;
+          } else {
+            itemContent += text;
+          }
+        }
+      });
+      items.push(itemContent.trim() || li.textContent.trim());
     });
 
     return { type, items };

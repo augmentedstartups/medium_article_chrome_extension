@@ -111,6 +111,17 @@ const ProseMirrorStrategy = {
           case 'p':
           case 'paragraph':
             if (schema.nodes.paragraph) {
+              const lines = block.content.split('\n').map(line => line.trim()).filter(line => line);
+              if (lines.length > 1) {
+                for (const line of lines) {
+                  const paragraphNode = schema.nodes.paragraph.create(
+                    { class: 'article-editor-paragraph' },
+                    schema.text(line)
+                  );
+                  nodes.push(paragraphNode);
+                }
+                continue;
+              }
               node = schema.nodes.paragraph.create(
                 { class: 'article-editor-paragraph' },
                 schema.text(block.content)
@@ -144,26 +155,80 @@ const ProseMirrorStrategy = {
           case 'ul':
           case 'bullet_list':
             if (schema.nodes.bullet_list && schema.nodes.list_item) {
-              const listItems = block.items.map(item =>
-                schema.nodes.list_item.create(
-                  null,
-                  schema.nodes.paragraph.create(null, schema.text(item))
-                )
-              );
-              node = schema.nodes.bullet_list.create(null, listItems);
+              const listItems = [];
+              const breakoutParagraphs = [];
+
+              block.items.forEach(item => {
+                const parts = item.split('\n').map(p => p.trim()).filter(p => p);
+                
+                if (parts.length > 0) {
+                  // First part stays in list
+                  listItems.push(
+                    schema.nodes.list_item.create(
+                      null,
+                      schema.nodes.paragraph.create(null, schema.text(parts[0]))
+                    )
+                  );
+                  
+                  // Subsequent parts break out into new paragraphs
+                  for (let i = 1; i < parts.length; i++) {
+                    breakoutParagraphs.push(
+                      schema.nodes.paragraph.create(
+                        { class: 'article-editor-paragraph' },
+                        schema.text(parts[i])
+                      )
+                    );
+                  }
+                }
+              });
+
+              if (listItems.length > 0) {
+                nodes.push(schema.nodes.bullet_list.create(null, listItems));
+              }
+              
+              if (breakoutParagraphs.length > 0) {
+                nodes.push(...breakoutParagraphs);
+              }
+              continue;
             }
             break;
             
           case 'ol':
           case 'ordered_list':
             if (schema.nodes.ordered_list && schema.nodes.list_item) {
-              const listItems = block.items.map(item =>
-                schema.nodes.list_item.create(
-                  null,
-                  schema.nodes.paragraph.create(null, schema.text(item))
-                )
-              );
-              node = schema.nodes.ordered_list.create(null, listItems);
+              const listItems = [];
+              const breakoutParagraphs = [];
+
+              block.items.forEach(item => {
+                const parts = item.split('\n').map(p => p.trim()).filter(p => p);
+                
+                if (parts.length > 0) {
+                  listItems.push(
+                    schema.nodes.list_item.create(
+                      null,
+                      schema.nodes.paragraph.create(null, schema.text(parts[0]))
+                    )
+                  );
+                  
+                  for (let i = 1; i < parts.length; i++) {
+                    breakoutParagraphs.push(
+                      schema.nodes.paragraph.create(
+                        { class: 'article-editor-paragraph' },
+                        schema.text(parts[i])
+                      )
+                    );
+                  }
+                }
+              });
+
+              if (listItems.length > 0) {
+                nodes.push(schema.nodes.ordered_list.create(null, listItems));
+              }
+              
+              if (breakoutParagraphs.length > 0) {
+                nodes.push(...breakoutParagraphs);
+              }
+              continue;
             }
             break;
             
@@ -219,17 +284,20 @@ const ProseMirrorStrategy = {
   
   insertNodes(pmView, nodes) {
     const { state, dispatch } = pmView;
-    const tr = state.tr;
+    let tr = state.tr;
     
-    const endPos = state.doc.content.size;
-    
-    console.log('[ProseMirror Strategy] Inserting at position:', endPos);
-    console.log('[ProseMirror Strategy] Document size:', state.doc.content.size);
+    console.log('[ProseMirror Strategy] Replacing document content with', nodes.length, 'nodes');
+    console.log('[ProseMirror Strategy] Initial document size:', state.doc.content.size);
     
     try {
+      tr = tr.delete(0, tr.doc.content.size);
+      let currentPos = 0;
+      
       for (let i = 0; i < nodes.length; i++) {
         try {
-          tr.insert(tr.doc.content.size - 1, nodes[i]);
+          tr = tr.insert(currentPos, nodes[i]);
+          currentPos += nodes[i].nodeSize;
+          console.log('[ProseMirror Strategy] Inserted node', i, 'size:', nodes[i].nodeSize);
         } catch (error) {
           console.error('[ProseMirror Strategy] Failed to insert node', i, error);
         }
@@ -244,6 +312,10 @@ const ProseMirrorStrategy = {
     }
   }
 };
+
+
+
+
 
 
 

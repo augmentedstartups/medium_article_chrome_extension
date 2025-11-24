@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Medium to LinkedIn Article Publisher",
-  "version": "1.13.0",
+  "version": "1.13.5",
   "description": "Extract Medium articles and publish them to LinkedIn with one click",
   "permissions": [
     "activeTab",
@@ -21,7 +21,7 @@
   "content_scripts": [
     {
       "matches": ["https://medium.com/*", "https://*.medium.com/*"],
-      "js": ["src/shared/config.js", "src/medium/parser.js", "src/medium/extractor.js", "src/medium/ui-injector.js", "src/medium/test-image-extract-button.js"],
+      "js": ["src/shared/config.js", "src/medium/parser.js", "src/medium/extractor.js", "src/medium/ui-injector.js"],
       "run_at": "document_idle"
     },
     {
